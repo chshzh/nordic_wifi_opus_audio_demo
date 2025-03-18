@@ -5,10 +5,14 @@ This project demonstrates how to use Wi-Fi with UDP/TCP sockets for real-time au
 # Requirements:
 
 HW: 
-- nRF5340 Audio DK x 2
-- nRF7002EK x 2
+- nRF5340 Audio DK x 2 (Audio Gateway and Headset)
+- nRF7002EK x 2 (Plug in nRF5340 Audio DK as shield to support Wi-Fi)
 - USB C cable x 2
 - Earphones/Headphones with 3.5mm jack
+
+Optional HW modifications for Wi-Fi Audio Headset Device:
+- Enable Battery Power: Connect nRF7002EK V5V pin to nRF5340 Audio DK TP30 testpoint.
+- Copy Audio Channel:The device HW codec can only decode one channel from sound source by default, short nRF5340 Audio DK P14 pin1 and pin2 to output it on both headphone output channels.
 
 SW: 
 - NCS v2.8.0
