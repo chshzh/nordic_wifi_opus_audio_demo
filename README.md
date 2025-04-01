@@ -34,7 +34,7 @@ SW:
 
 ```bash
 git clone https://github.com/charlieshao5189/nordic_wifi_audio_demo.git
-cd nordic_wifi_audio_demo/wifi_audio/src/audio/opus
+cd nordic_wifi_opus_audio_demo/wifi_audio/src/audio/opus
 git submodule update --init
 git checkout v1.5.2
 ```
@@ -140,5 +140,11 @@ After socket connection is established. Make sure your host pc choose nRF5340 US
 # DebuggingTips:
 1. Fix building warnning "Setting build type to 'MinSizeRel' as none was specified.": https://github.com/zephyrproject-rtos/picolibc/pull/7/files.
 2. Command to debug hard fault:
-        - Linux:  /opt/nordic/ncs/toolchains/f8037e9b83/opt/zephyr-sdk/arm-zephyr-eabi/bin/arm-zephyr-eabi-addr2line -e /opt/nordic/ncs/myapps/nordic_wifi_audio_demo/wifi_audio/build_static_headset/wifi_audio/zephyr/zephyr.elf 0x00094eae
-        - Windows: C:\nordic\toolchains\2d382dcd92\opt\zephyr-sdk\arm-zephyr-eabi\bin\arm-zephyr-eabi-addr2line.exe -e C:\nordic\myApps\nordic_wifi_audio_demo\wifi_audio\build_static_gateway\wifi_audio\zephyr\zephyr.elf 0x0002fdfb
+    - Linux:
+        ```bash
+        /opt/nordic/ncs/toolchains/f8037e9b83/opt/zephyr-sdk/arm-zephyr-eabi/bin/arm-zephyr-eabi-addr2line -e /opt/nordic/ncs/myapps/nordic_wifi_audio_demo/wifi_audio/build_static_headset/wifi_audio/zephyr/zephyr.elf 0x00094eae
+        ```
+    - Windows:
+        ```
+        C:\ncs\toolchains\2d382dcd92\opt\zephyr-sdk\arm-zephyr-eabi\bin\arm-zephyr-eabi-addr2line.exe -e C:\ncs\myApps\nordic_wifi_opus_audio_demo\wifi_audio\build_opus_headset\wifi_audio\zephyr\zephyr.elf 0x0002fdfb
+        ```
