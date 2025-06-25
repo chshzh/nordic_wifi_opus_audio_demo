@@ -42,4 +42,6 @@ config SHELL_STACK_SIZE
  	default 8192
 config WIFI_CREDENTIALS_SHELL
  	default y
+config NET_L2_WIFI_SHELL
+ 	default y
 

@@ -1,0 +1,12 @@
+#
+# Copyright (c) 2024 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+# For now, we don't need the network core image for this WiFi audio demo
+# This can be changed later if RPMSG/IPC communication is needed
+config NRF_DEFAULT_EMPTY
+	default y
+
+source "share/sysbuild/Kconfig" 

@@ -15,7 +15,7 @@ Optional HW modifications for Wi-Fi Audio Headset Device:
 - Copy Audio Channel:The device HW codec can only decode one channel from sound source by default, short nRF5340 Audio DK P14 pin1 and pin2 to output it on both headphone output channels.
 
 SW: 
-- NCS v2.8.0
+- NCS v3.0.2
 - Opus v1.5.2
 
 
@@ -47,20 +47,20 @@ The sample has following building options.
 Gateway:
 
 ```bash
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_gateway --sysbuild -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-audio-gateway.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_gateway  -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-audio-gateway.conf"
 west flash --erase -d build_gateway
 
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway --sysbuild -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway  -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf"
 west flash --erase -d build_opus_gateway
 ```
 
 Headset:
 
 ```bash
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_headset --sysbuild -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-audio-headset.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_headset  -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-audio-headset.conf"
 west flash --erase -d build_headset
 
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_headset --sysbuild -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-headset.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_headset  -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-headset.conf"
 west flash --erase -d build_opus_headset
 ```
 
@@ -68,19 +68,19 @@ west flash --erase -d build_opus_headset
 Gateway:
 
 ```bash
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_gateway --sysbuild -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-gateway.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_gateway  -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-gateway.conf"
 west flash --erase -d build_static_gateway
 
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_gateway --sysbuild -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-opus.conf;overlay-audio-gateway.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_gateway  -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-opus.conf;overlay-audio-gateway.conf"
 west flash --erase -d build_static_opus_gateway
 ```
 Headset:
 
 ```bash
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_headset --sysbuild -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-headset.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_headset  -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-headset.conf"
 west flash --erase -d build_static_headset
 
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_headset --sysbuild -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-headset.conf;overlay-opus.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_headset  -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-headset.conf;overlay-opus.conf"
 west flash --erase -d build_static_opus_headset
 ```
 
@@ -89,8 +89,8 @@ west flash --erase -d build_static_opus_headset
 
 Example to build audio gateway/headset with both Opus and TCP socket enabled:
 ```bash
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_tcp_gateway --sysbuild -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-opus.conf;overlay-tcp.conf;overlay-audio-gateway.conf"
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_tcp_headset --sysbuild -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-headset.conf;overlay-opus.conf;overlay-tcp.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_tcp_gateway  -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-opus.conf;overlay-tcp.conf;overlay-audio-gateway.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_tcp_headset  -- -DSHIELD="nrf7002ek"  -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-headset.conf;overlay-opus.conf;overlay-tcp.conf"
 ```
 
 # Running Guide
@@ -99,8 +99,8 @@ WiFi CREDENTIALS SHELL example:
 ### 1) Connect WiFi gateway and Audio devcies with WiFi router
 
 ```
-uart:~$ wifi_cred
-wifi_cred - Wi-Fi Credentials commands
+uart:~$ wifi cred
+wifi cred - Wi-Fi Credentials commands
 Subcommands:
   add           : Add network to storage.
                   <-s --ssid "<SSID>">: SSID.
@@ -126,8 +126,8 @@ Subcommands:
   auto_connect  : Connect to any stored network.
   delete        : Delete network from storage.
   list          : List stored networks.
-uart:~$ wifi_cred add -s wifi_ssid -p wifi_password -k 1
-uart:~$ wifi_cred auto_connect
+uart:~$ wifi cred add -s wifi_ssid -p wifi_password -k 1
+uart:~$ wifi cred auto_connect
 ```
 The device will remember this set of credential and autoconnect to target router after reset.
 Headset device will find Gateway device automatically through mDNS in the same network.

@@ -27,7 +27,7 @@ LOG_MODULE_REGISTER(wifi_station_mode, CONFIG_LOG_DEFAULT_LEVEL);
 #include "net_private.h"
 
 /* Include the header file for the Wi-FI credentials library */
-#include <net/wifi_credentials.h>
+#include <zephyr/net/wifi_credentials.h>
 
 #include <dk_buttons_and_leds.h>
 #include <zephyr/logging/log_ctrl.h>
@@ -167,7 +167,7 @@ int wifi_station_mode_ready(void)
 	}
 #else
 	LOG_INF("\r\n\r\nRunning on WiFi Station mode.\r\nPlease connect to router with "
-		"'wifi_cred' commands, use 'wifi_cred help' to get help.\r\n");
+		"'wifi cred' commands, use 'wifi cred help' to get help.\r\n");
 #endif
         while (!wifi_connected_signal) {
                 k_sleep(K_MSEC(100));
