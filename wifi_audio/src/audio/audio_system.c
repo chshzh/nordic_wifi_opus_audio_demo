@@ -492,6 +492,18 @@ int audio_system_init(void)
 		LOG_ERR("Failed to initialize USB: %d", ret);
 		return ret;
 	}
+#elif (CONFIG_AUDIO_SOURCE_I2S)
+	ret = audio_datapath_init();
+	if (ret) {
+		LOG_ERR("Failed to initialize audio datapath: %d", ret);
+		return ret;
+	}
+
+	ret = hw_codec_init();
+	if (ret) {
+		LOG_ERR("Failed to initialize HW codec: %d", ret);
+		return ret;
+	}
 #endif // CONFIG_AUDIO_SOURCE_USB
 
 #elif IS_ENABLED(CONFIG_AUDIO_HEADSET)
