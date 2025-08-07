@@ -1,0 +1,58 @@
+#
+# Copyright (c) 2024 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+#----------------------------------------------------------------------------#
+rsource "Kconfig.defaults"
+
+menu "WiFi Audio Transceiver"
+          
+choice AUDIO_DEV_ROLE
+	prompt "Choose device role from transmite, receiver and walkie talkie"
+	default AUDIO_GATEWAY
+
+config AUDIO_GATEWAY
+	bool "Play audio stream transmiter role"
+
+config AUDIO_HEADSET
+	bool "Play audio stream receiver role"
+
+endchoice #AUDIO_DEV_ROLE
+
+config AUDIO_WALKIE_TALKIE
+	bool "Enable walkie talkie feature, can enabled on both gateway and headset"
+        default n
+
+endmenu # "Audio Stream Transceiver"
+
+if (AUDIO_GATEWAY = y)
+rsource "wifi_audio_gateway/Kconfig.defaults"
+endif
+
+if (AUDIO_HEADSET = y)
+rsource "wifi_audio_headset/Kconfig.defaults"
+endif 
+
+rsource "src/audio/Kconfig"
+rsource "src/net/Kconfig"
+rsource "src/drivers/Kconfig"
+rsource "src/modules/Kconfig"
+rsource "src/utils/Kconfig"
+
+#----------------------------------------------------------------------------#
+menu "Logging"
+
+module = MAIN
+module-str = main
+source "subsys/logging/Kconfig.template.log_config"
+
+config PRINT_STACK_USAGE_MS
+	depends on THREAD_ANALYZER && INIT_STACKS
+	int "Print stack usage every x milliseconds"
+	default 5000
+
+endmenu # Log levels
+
+source "Kconfig.zephyr"
