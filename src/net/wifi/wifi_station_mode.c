@@ -169,10 +169,10 @@ int wifi_station_mode_ready(void)
 	LOG_INF("\r\n\r\nRunning on WiFi Station mode.\r\nPlease connect to router with "
 		"'wifi cred' commands, use 'wifi cred help' to get help.\r\n");
 #endif
-        while (!wifi_connected_signal) {
-                k_sleep(K_MSEC(100));
-        }
-        LOG_INF("Wi-Fi is ready, proceeding with the application.");
-        
+	while (!wifi_connected_signal) {
+		k_sleep(K_MSEC(100));
+	}
+	LOG_INF("Wi-Fi is ready, proceeding with the application.");
+
 	return 0;
 }

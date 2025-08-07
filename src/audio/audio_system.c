@@ -6,21 +6,22 @@
 
 #include "audio_system.h"
 
-#include <zephyr/kernel.h>
-#include <zephyr/shell/shell.h>
-#include <data_fifo.h>
-#include <contin_array.h>
-#include <pcm_stream_channel_modifier.h>
-#include <tone.h>
-#include "macros_common.h"
-#include "sw_codec_select.h"
 #include "audio_datapath.h"
 #include "audio_i2s.h"
-#include "hw_codec.h"
 #include "audio_usb.h"
+#include "hw_codec.h"
+#include "macros_common.h"
 #include "streamctrl.h"
+#include "sw_codec_select.h"
 #include "wifi_audio_rx.h"
+#include <contin_array.h>
+#include <data_fifo.h>
+#include <pcm_stream_channel_modifier.h>
+#include <tone.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/shell/shell.h>
+
 LOG_MODULE_REGISTER(audio_system, CONFIG_AUDIO_SYSTEM_LOG_LEVEL);
 
 #define FIFO_TX_BLOCK_COUNT (CONFIG_FIFO_FRAME_SPLIT_NUM * CONFIG_FIFO_TX_FRAME_COUNT)
@@ -90,6 +91,7 @@ static void audio_headset_configure(void)
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_OPUS)) {
 		sw_codec_cfg.sw_codec = SW_CODEC_OPUS;
 	} else {
+
 		LOG_INF("No codec selected, transfering uncompressed PCM audio data.");
 	}
 
@@ -291,7 +293,8 @@ int audio_system_config_set(uint32_t encoder_sample_rate_hz, uint32_t encoder_bi
 	return 0;
 }
 
-/* This function is only used on gateway using USB as audio source and bidirectional stream */
+/* This function is only used on gateway using USB as audio source and
+ * bidirectional stream */
 int audio_system_decode(void const *const encoded_data, size_t encoded_data_size, bool bad_frame)
 {
 	int ret;

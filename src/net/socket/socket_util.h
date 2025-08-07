@@ -24,4 +24,4 @@ void socket_util_set_rx_callback(net_util_socket_rx_callback_t socket_rx_callbac
 int socket_util_tx_data(uint8_t *data, size_t length);
 void socket_util_thread(void);
 
-#endif 
+#endif
