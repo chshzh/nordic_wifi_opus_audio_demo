@@ -126,9 +126,15 @@ Here are some building examples:
 
 ###  Recommended: Wi-Fi Opus Audio (Dynamic Credentials)
 
-**Gateway:**
+**Gateway USB Audio Source:**
 ```bash
 west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf"
+west flash --erase -d build_opus_gateway
+```
+
+**Gateway LINE IN Audio Source:**
+```bash
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf;overlay-line-in.conf"
 west flash --erase -d build_opus_gateway
 ```
 
@@ -138,7 +144,7 @@ west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_headset -- -DSHIE
 west flash --erase -d build_opus_headset
 ```
 
-### 📶 WiFi Station Mode + WiFi CREDENTIALS SHELL (for SSID+Password Input) + UDP +Raw PCM Audio
+### 📶 WiFi Station Mode + WiFi CREDENTIALS SHELL (for SSID+Password Input) + UDP + Raw PCM Audio
 
 **Gateway:**
 ```bash
