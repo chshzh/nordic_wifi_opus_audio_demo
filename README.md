@@ -1,12 +1,15 @@
 # Nordic Wi-Fi Opus Audio Demo
 
-[![Build and Test](https://github.com/your-repo/nordic_wifi_opus_audio_demo/workflows/Build%20and%20Test%20Wi-Fi%20Opus%20Audio%20Demo/badge.svg)](https://github.com/your-repo/nordic_wifi_opus_audio_demo/actions)
+![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF7002EK-blue)
+![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF5340_Audio_DK-red)
 [![License](https://img.shields.io/badge/License-LicenseRef--Nordic--5--Clause-blue.svg)](LICENSE)
 [![NCS Version](https://img.shields.io/badge/NCS-v3.0.2-green.svg)](https://www.nordicsemi.com/Products/Development-software/nRF-Connect-SDK)
 
 ## 🔍 Overview
 
 This project demonstrates how to use Wi-Fi with UDP/TCP sockets for real-time audio streaming. It is designed to showcase low-latency audio transfer, utilizing the nRF5340 Audio DK and nRF7002 EK platforms. This sample also integrates the Opus codec for efficient audio compression and decompression, offering flexibility for various network conditions.
+
+> **⚠️ TCP Support Notice**: TCP support is currently not maintained due to significantly higher latency compared to UDP. For optimal real-time audio performance, UDP is strongly recommended.
 
 ## 🎯 Key Features
 
@@ -42,6 +45,7 @@ The demo supports the following audio streaming configurations:
 ### Optional Hardware Modifications for Wi-Fi Audio Headset Device
 - **Enable Battery Power**: Connect nRF7002EK V5V pin to nRF5340 Audio DK TP30 testpoint.
 - **Copy Audio Channel**: The device HW codec can only decode one channel from sound source by default, short nRF5340 Audio DK P14 pin1 and pin2 to output it on both headphone output channels.
+- **Audio input through LINE IN** Get audio input through LINE IN. Need to add "overlay-line-in.conf" when build audio gateway firmware.
 
 ### Software Requirements
 **SW:** 
@@ -53,7 +57,7 @@ The demo supports the following audio streaming configurations:
 ### 1. Repository Setup
 
 ```bash
-git clone https://github.com/charlieshao5189/nordic_wifi_audio_demo.git
+git clone https://github.com/chshzh/nordic_wifi_audio_demo.git
 cd nordic_wifi_opus_audio_demo/wifi_audio/src/audio/opus      
 git submodule update --init
 git checkout v1.5.2
@@ -96,7 +100,7 @@ Fine-tune audio quality and performance by adjusting Opus codec parameters:
 
 | **Parameter**       | **Description**                                    | **Default Value**      | **Notes**                                                   |
 |---------------------|----------------------------------------------------|-------------------------|------------------------------------------------------------|
-| `Bitrate`           | Controls the quality and bandwidth usage.          | 6kbps upto 320kbps       | Higher bitrate improves quality but increases CPU usage and frame encoding time.    |
+| `Bitrate`           | Controls the quality and bandwidth usage.          | 320kbps       | Higher bitrate improves quality but increases CPU usage and frame encoding time.    |
 | `Frame Size`        | Duration of each audio frame in milliseconds.      | 10ms                     | Smaller frames reduce latency but increase overhead.        |
 | `Complexity`        | Encoding complexity level (0-10).                  | 0                        | Lower values reduce CPU usage; higher values improve quality. |
 | `Application`       | Optimization mode (VoIP, Audio, or Automatic).     | `OPUS_APPLICATION_AUDIO` | Choose based on use case (e.g., VoIP for voice).            |
@@ -107,17 +111,18 @@ Fine-tune audio quality and performance by adjusting Opus codec parameters:
 
 The sample supports multiple build configurations through overlay files:
 
-- **`overlay-opus.conf`** - Enable Opus codec support
+- **`overlay-opus.conf`** - Enable Opus codec support, otherwise raw PCM data.
 - **`overlay-audio-gateway.conf`** - Configure device as audio gateway
 - **`overlay-audio-headset.conf`** - Configure device as audio headset
 - **`overlay-tcp.conf`** - Use TCP instead of UDP for audio streaming
 - **`overlay-wifi-sta-static.conf`** - Use static Wi-Fi credentials
+- **`overlay-line-in.conf`** - Enable gateway device to use LINE IN as audio input instead of USB
 
 ## 📋 Building
 
-The sample has the following building options:
+Here are some building examples:
 
-### 🎧 Recommended: Wi-Fi Opus Audio (Dynamic Credentials)
+###  Recommended: Wi-Fi Opus Audio (Dynamic Credentials)
 
 **Gateway:**
 ```bash
@@ -131,33 +136,13 @@ west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_headset -- -DSHIE
 west flash --erase -d build_opus_headset
 ```
 
-### 📶 WiFi Station Mode + WiFi CREDENTIALS SHELL (for SSID+Password Input) + UDP
+### 📶 WiFi Station Mode + WiFi CREDENTIALS SHELL (for SSID+Password Input) + UDP +Raw PCM Audio
 
 **Gateway:**
 ```bash
 west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_gateway -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-audio-gateway.conf"
-
-# Repository Setup
-
-```bash
-git clone https://github.com/charlieshao5189/nordic_wifi_audio_demo.git
-cd nordic_wifi_opus_audio_demo/wifi_audio/src/audio/opus      
-git submodule update --init
-git checkout v1.5.2
-```
-
-# Building
-The sample has following building options.
-
-## WiFi Station Mode + WiFi CREDENTIALS SHELL(for SSID+Password Input) + UDP 
-
-Gateway:
-
-```bash
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_gateway  -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-audio-gateway.conf"
 west flash --erase -d build_gateway
 ```
-
 **Headset:**
 ```bash
 west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_headset -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-audio-headset.conf"
@@ -182,20 +167,6 @@ west flash --erase -d build_static_headset
 
 west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_headset -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-headset.conf;overlay-opus.conf"
 west flash --erase -d build_static_opus_headset
-```
-
-### 📡 Advanced Configuration Examples
-
-**Use TCP instead of UDP:**
-- Add `-DEXTRA_CONF_FILE=overlay-tcp.conf` to switch from UDP socket to TCP socket.
-
-**Enable Opus codec:**
-- Add `-DEXTRA_CONF_FILE=overlay-opus.conf` to turn on Opus codec.
-
-**Example: Build audio gateway/headset with both Opus and TCP socket enabled:**
-```bash
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_tcp_gateway -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-opus.conf;overlay-tcp.conf;overlay-audio-gateway.conf"
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_tcp_headset -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-wifi-sta-static.conf;overlay-audio-headset.conf;overlay-opus.conf;overlay-tcp.conf"
 ```
 
 ## 🎮 Operation Guide
@@ -265,24 +236,6 @@ Command to debug hard fault:
 ```cmd
 C:\ncs\toolchains\2d382dcd92\opt\zephyr-sdk\arm-zephyr-eabi\bin\arm-zephyr-eabi-addr2line.exe -e C:\ncs\myApps\nordic_wifi_opus_audio_demo\wifi_audio\build_opus_headset\wifi_audio\zephyr\zephyr.elf 0x0002fdfb
 ```
-
-### 3. Common Issues and Solutions
-
-| **Issue** | **Solution** |
-|-----------|-------------|
-| No audio output | Check USB Audio device selection on PC |
-| Connection timeout | Verify Wi-Fi credentials and network connectivity |
-| Audio dropouts | Adjust Opus bitrate or check network quality |
-| Device not discovered | Ensure both devices are on the same network |
-
-## 📊 Performance Characteristics
-
-| **Configuration** | **Latency** | **CPU Usage** | **Power Consumption** | **Audio Quality** |
-|-------------------|-------------|---------------|-----------------------|-------------------|
-| UDP + Opus 32kbps | ~20ms | Low | Optimized | Good |
-| UDP + Opus 128kbps | ~25ms | Medium | Higher | Excellent |
-| TCP + Opus 128kbps | ~30ms | Medium | Higher | Excellent |
-| UDP Raw Audio | ~15ms | Very Low | Lowest | High |
 
 ## 📄 License
 
