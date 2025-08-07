@@ -42,6 +42,8 @@ The demo supports the following audio streaming configurations:
 - **Earphones/Headphones** with 3.5mm jack
 - **Cable with Double 3.5mm jack Male Header(Optional)** 
 
+> **⚠️ MacBook Compatibility Notice**: The audio gateway device may not work properly with MacBook devices through USB-C due to compatibility issues. For best results, use a Windows or Linux PC as the audio source when USB-C used as audio input.
+
 ### Optional Hardware Modifications for Wi-Fi Audio Headset Device
 - **Enable Battery Power**: Connect nRF7002EK V5V pin to nRF5340 Audio DK TP30 testpoint.
 - **Copy Audio Channel**: The device HW codec can only decode one channel from sound source by default, short nRF5340 Audio DK P14 pin1 and pin2 to output it on both headphone output channels.
