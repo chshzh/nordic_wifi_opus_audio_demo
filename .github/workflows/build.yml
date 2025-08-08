@@ -39,10 +39,14 @@ jobs:
       matrix:
         config:
           # Wi-Fi Opus Audio Gateway and Headset builds
-          - name: "Wi-Fi Opus Audio Gateway"
-            build_dir: "build_opus_gateway"
+          - name: "Wi-Fi Opus Audio Gateway USB"
+            build_dir: "build_opus_gateway_usb"
             overlay: "overlay-opus.conf;overlay-audio-gateway.conf"
-            description: "Wi-Fi Opus Audio Gateway device"
+            description: "Wi-Fi Opus Audio Gateway device with USB audio source"
+          - name: "Wi-Fi Opus Audio Gateway LINE IN"
+            build_dir: "build_opus_gateway_linein"
+            overlay: "overlay-opus.conf;overlay-audio-gateway.conf;overlay-line-in.conf"
+            description: "Wi-Fi Opus Audio Gateway device with LINE IN audio source"
           - name: "Wi-Fi Opus Audio Headset"
             build_dir: "build_opus_headset"
             overlay: "overlay-opus.conf;overlay-audio-headset.conf"
@@ -239,7 +243,7 @@ jobs:
           
           # Copy and rename hex files with configuration names
           for config_dir in artifacts/build-*; do
-            config_name=$(basename "$config_dir" | sed 's/build-//' | sed 's/ /-/g')
+            config_name=$(basename "$config_dir" | sed 's/build-//' | sed 's/ /-/g' | tr '[:upper:]' '[:lower:]')
             if [ -f "$config_dir/merged.hex" ]; then
               cp "$config_dir/merged.hex" "release-package/nordic-wifi-opus-audio-demo-${config_name}-${GITHUB_REF_NAME}.hex"
             fi
@@ -266,7 +270,8 @@ jobs:
             This release contains pre-compiled firmware for Wi-Fi Opus Audio Demo configurations:
             
             ### Firmware Configurations Included:
-            - **Wi-Fi Opus Audio Gateway** - Audio gateway device with Opus codec support
+            - **Wi-Fi Opus Audio Gateway USB** - Audio gateway device with USB audio input and Opus codec support
+            - **Wi-Fi Opus Audio Gateway LINE IN** - Audio gateway device with LINE IN audio input and Opus codec support
             - **Wi-Fi Opus Audio Headset** - Audio headset device with Opus codec support
             
             ### Files:
