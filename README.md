@@ -1,9 +1,11 @@
 # Nordic Wi-Fi Opus Audio Demo
 
-![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF7002EK-blue)
-![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF5340_Audio_DK-red)
+[![Build and Test Wi-Fi Opus Audio Demo](https://github.com/chshzh/nordic_wifi_opus_audio_demo/actions/workflows/build.yml/badge.svg)](https://github.com/chshzh/nordic_wifi_opus_audio_demo/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/License-LicenseRef--Nordic--5--Clause-blue.svg)](LICENSE)
 [![NCS Version](https://img.shields.io/badge/NCS-v3.0.2-green.svg)](https://www.nordicsemi.com/Products/Development-software/nRF-Connect-SDK)
+![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF7002EK-blue)
+![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF5340_Audio_DK-red)
+
 
 ## 🔍 Overview
 
