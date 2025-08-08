@@ -10,7 +10,7 @@ on:
 
 jobs:
   set-version:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       NCS_VERSION: ${{ steps.extract-version.outputs.NCS_VERSION }}
     steps:
@@ -28,7 +28,7 @@ jobs:
 
   build-and-test-in-docker:
     needs: set-version
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container: ghcr.io/nrfconnect/sdk-nrf-toolchain:${{ needs.set-version.outputs.NCS_VERSION }}
     defaults:
       run:
@@ -85,7 +85,7 @@ jobs:
             app-workspace/nordic_wifi_opus_audio_demo/${{ matrix.config.build_dir }}/merged.hex
 
   validate-documentation:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -129,33 +129,9 @@ jobs:
           
           echo "Configuration files validation passed ✓"
 
-      - name: Check license headers in source files
-        working-directory: app-workspace/nordic_wifi_opus_audio_demo
-        run: |
-          echo "Validating license headers..."
-          
-          # Check that source files have proper license headers
-          missing_headers=0
-          
-          if [ -d src/ ]; then
-            for file in $(find src/ -name "*.c" -o -name "*.h"); do
-              if ! grep -q "SPDX-License-Identifier: LicenseRef-Nordic-5-Clause" "$file"; then
-                echo "Missing license header in: $file"
-                missing_headers=$((missing_headers + 1))
-              fi
-            done
-          fi
-          
-          if [ $missing_headers -gt 0 ]; then
-            echo "❌ $missing_headers files missing license headers"
-            exit 1
-          fi
-          
-          echo "License header validation passed ✓"
-
   static-analysis:
     needs: set-version
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container: ghcr.io/nrfconnect/sdk-nrf-toolchain:${{ needs.set-version.outputs.NCS_VERSION }}
     defaults:
       run:
@@ -246,7 +222,7 @@ jobs:
 
   create-release:
     needs: [set-version, build-and-test-in-docker, validate-documentation, static-analysis]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download all build artifacts

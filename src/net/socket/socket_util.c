@@ -21,11 +21,11 @@ LOG_MODULE_REGISTER(socket_util, CONFIG_SOCKET_UTIL_MODULE_LOG_LEVEL);
 
 #include <zephyr/net/dns_resolve.h>
 
-#define FATAL_ERROR()                                      \
-	do {                                                   \
-		LOG_ERR("Fatal error! Rebooting the device.");     \
-		LOG_PANIC();                                       \
-		IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)));        \
+#define FATAL_ERROR()                                                                              \
+	do {                                                                                       \
+		LOG_ERR("Fatal error! Rebooting the device.");                                     \
+		LOG_PANIC();                                                                       \
+		IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)));                                        \
 	} while (0)
 
 /* size of stack area used by each thread */
