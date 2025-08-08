@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -21,9 +21,7 @@ static bool wifi_ready_status;
 
 #include <dk_buttons_and_leds.h>
 
-static volatile bool wifi_connected_signal = false;
-
-int wifi_softap_mode_ready(void);
+static volatile bool wifi_connected_signal;
 
 static struct net_mgmt_event_callback wifi_sap_mgmt_cb;
 
@@ -96,8 +94,7 @@ static void handle_wifi_ap_sta_connected(struct net_mgmt_event_callback *cb)
 	}
 
 	if (i == CONFIG_SOFTAP_MAX_STATIONS) {
-		LOG_ERR("No space to store station info: "
-			"Increase CONFIG_SOFTAP_MAX_STATIONS");
+		LOG_ERR("No space to store station info: Increase CONFIG_SOFTAP_MAX_STATIONS");
 	}
 
 	wifi_ap_stations_unlocked();
@@ -327,24 +324,33 @@ out:
 	return ret;
 }
 
-#define CHECK_RET(func, ...)                                                                       \
-	do {                                                                                       \
-		ret = func(__VA_ARGS__);                                                           \
-		if (ret) {                                                                         \
-			LOG_ERR("Failed to configure %s", #func);                                  \
-			return -1;                                                                 \
-		}                                                                                  \
-	} while (0)
+static int check_ret(int ret, const char *func_name)
+{
+	if (ret) {
+		LOG_ERR("Failed to configure %s", func_name);
+		return -1;
+	}
+	return 0;
+}
 
 static int start_app(void)
 {
 	int ret;
 
-	CHECK_RET(wifi_set_reg_domain);
+	ret = wifi_set_reg_domain();
+	if (check_ret(ret, "wifi_set_reg_domain")) {
+		return -1;
+	}
 
-	CHECK_RET(configure_dhcp_server);
+	ret = configure_dhcp_server();
+	if (check_ret(ret, "configure_dhcp_server")) {
+		return -1;
+	}
 
-	CHECK_RET(wifi_softap_enable);
+	ret = wifi_softap_enable();
+	if (check_ret(ret, "wifi_softap_enable")) {
+		return -1;
+	}
 
 	cmd_wifi_status();
 

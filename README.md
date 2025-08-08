@@ -60,7 +60,7 @@ The demo supports the following audio streaming configurations:
 
 ```bash
 git clone https://github.com/chshzh/nordic_wifi_audio_demo.git
-cd nordic_wifi_opus_audio_demo/wifi_audio/src/audio/opus      
+cd nordic_wifi_opus_audio_demo/lib/opus
 git submodule update --init
 git checkout v1.5.2
 ```

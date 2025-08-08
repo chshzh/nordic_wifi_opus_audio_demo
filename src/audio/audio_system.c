@@ -293,8 +293,10 @@ int audio_system_config_set(uint32_t encoder_sample_rate_hz, uint32_t encoder_bi
 	return 0;
 }
 
-/* This function is only used on gateway using USB as audio source and
- * bidirectional stream */
+/*
+ * This function is only used on gateway using USB as audio source and
+ * bidirectional stream
+ */
 int audio_system_decode(void const *const encoded_data, size_t encoded_data_size, bool bad_frame)
 {
 	int ret;

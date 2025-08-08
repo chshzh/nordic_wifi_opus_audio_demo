@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2025 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
 #ifndef _SOCKET_UTIL_H_
 #define _SOCKET_UTIL_H_
 

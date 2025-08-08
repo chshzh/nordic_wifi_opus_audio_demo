@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -21,10 +21,12 @@ LOG_MODULE_REGISTER(socket_util, CONFIG_SOCKET_UTIL_MODULE_LOG_LEVEL);
 
 #include <zephyr/net/dns_resolve.h>
 
-#define FATAL_ERROR()                                                                              \
-	LOG_ERR("Fatal error! Rebooting the device.");                                             \
-	LOG_PANIC();                                                                               \
-	IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)))
+#define FATAL_ERROR()                                      \
+	do {                                                   \
+		LOG_ERR("Fatal error! Rebooting the device.");     \
+		LOG_PANIC();                                       \
+		IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)));        \
+	} while (0)
 
 /* size of stack area used by each thread */
 #define STACKSIZE 8192
@@ -56,7 +58,7 @@ static socket_receive_t socket_receive;
 
 K_MSGQ_DEFINE(socket_recv_queue, sizeof(socket_receive), 1, 4);
 
-static net_util_socket_rx_callback_t socket_rx_cb = 0;
+static net_util_socket_rx_callback_t socket_rx_cb;
 
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
 volatile bool serveraddr_set_signall = false;
@@ -70,12 +72,13 @@ void socket_util_set_rx_callback(net_util_socket_rx_callback_t socket_rx_callbac
 
 	// If any messages are waiting in the queue, forward them immediately
 	socket_receive_t socket_receive;
+
 	while (k_msgq_get(&socket_recv_queue, &socket_receive, K_NO_WAIT) == 0) {
 		socket_rx_cb(socket_receive.buf, socket_receive.len);
 	}
 }
 
-static void socket_util_trigger_rx_callback_if_set()
+static void socket_util_trigger_rx_callback_if_set(void)
 {
 	LOG_DBG("Socket received %d bytes", socket_receive.len);
 	// LOG_HEXDUMP_DBG(socket_receive.buf, socket_receive.len, "Buffer contents(HEX):");
@@ -137,8 +140,8 @@ int do_mdns_query(void)
 	struct addrinfo hints = {.ai_socktype = SOCK_STREAM, .ai_family = AF_INET};
 
 	char addr_str[NET_IPV6_ADDR_LEN];
-
 	int err;
+
 	for (int i = 0; i < CONFIG_MDNS_QUERY_ATTEMPTS; i++) {
 		err = getaddrinfo(CONFIG_MDNS_QUERY_NAME, NULL, &hints, &result);
 		if (!err) {
@@ -210,8 +213,6 @@ void socket_util_thread(void)
 	target_addr.sin_family = AF_INET;
 
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
-	// LOG_INF("\r\n\r\nDevice works as socket client, connect target socket server address with
-	// " 	"shell command, for example:\r\nsocket set_target_addr 192.168.50.126:60010\r\n");
 
 #ifdef CONFIG_MDNS_RESOLVER
 	ret = do_mdns_query();
@@ -220,10 +221,9 @@ void socket_util_thread(void)
 #endif /* CONFIG_MDNS_RESOLVER */
 
 	if (ret < 0) {
-		LOG_INF("\r\n\r\n"
-			"Target address could not be resolved, please set it manually with shell "
-			"command\r\n"
-			"for example:\t socket set_target_addr 192.168.50.126:60010\r\n");
+		LOG_INF("\r\n\r\nTarget address could not be resolved, please set it manually with "
+			"shell command\r\n for example:\t socket set_target_addr "
+			"192.168.50.126:60010\r\n");
 	}
 
 	while (!serveraddr_set_signall) {
@@ -238,6 +238,7 @@ void socket_util_thread(void)
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
 	tcp_client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	int opt = 1;
+
 	setsockopt(tcp_client_socket, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
 	ret = connect(tcp_client_socket, (struct sockaddr *)&target_addr, sizeof(target_addr));
 	if (ret < 0) {
@@ -352,22 +353,6 @@ void socket_util_thread(void)
 #endif
 }
 
-/* K_THREAD_STACK_DEFINE(socket_util_thread_stack, CONFIG_SOCKET_STACK_SIZE);
-static struct k_thread socket_util_thread_data;
-static k_tid_t socket_util_thread_id;
-
-int socket_util_init(void){
-	int ret;
-
-	socket_util_thread_id = k_thread_create(&socket_util_thread_data,
-	socket_util_thread_stack, CONFIG_SOCKET_STACK_SIZE,
-				(k_thread_entry_t)socket_util_thread,  NULL, NULL, NULL,
-			K_PRIO_PREEMPT(CONFIG_SOCKET_UTIL_THREAD_PRIO), 0, K_NO_WAIT);
-
-	ret = k_thread_name_set(socket_util_thread_id, "SOCKET");
-	return ret;
-} */
-
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
 
 static int cmd_set_target_address(const struct shell *shell, size_t argc, const char **argv)
@@ -379,6 +364,7 @@ static int cmd_set_target_address(const struct shell *shell, size_t argc, const 
 	}
 
 	char *target_addr_str = (char *)k_malloc(22); // Allocate memory for the string
+
 	if (target_addr_str == NULL) {
 		shell_print(shell, "Memory allocation failed");
 		return -1;

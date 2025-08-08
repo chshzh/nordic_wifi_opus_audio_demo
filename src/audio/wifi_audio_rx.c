@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
 #include <zephyr/kernel.h>
 #include <nrfx_clock.h>
 

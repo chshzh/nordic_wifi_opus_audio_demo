@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
 #ifndef _NRF5340_AUDIO_DK_H_
 #define _NRF5340_AUDIO_DK_H_
 

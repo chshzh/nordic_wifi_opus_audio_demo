@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
 #ifndef _AUDIO_SYNC_TIMER_H_
 #define _AUDIO_SYNC_TIMER_H_
 

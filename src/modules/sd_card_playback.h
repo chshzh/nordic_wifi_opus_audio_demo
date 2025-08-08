@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
 #ifndef _SD_CARD_PLAYBACK_H_
 #define _SD_CARD_PLAYBACK_H_
 

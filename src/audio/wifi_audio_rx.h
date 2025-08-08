@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
 #ifndef _WIFI_AUDIO_RX_H_
 #define _WIFI_AUDIO_RX_H_
 

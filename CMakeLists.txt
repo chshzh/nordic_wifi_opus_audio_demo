@@ -49,6 +49,7 @@ zephyr_library_include_directories(
 zephyr_library_include_directories(app PRIVATE
 ${ZEPHYR_NRF_MODULE_DIR}/boards/arm/nrf5340_audio_dk_nrf5340)
 
+add_subdirectory(lib)
 add_subdirectory(src/audio)
 add_subdirectory(src/net)
 add_subdirectory(src/drivers)

@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
 #include "audio_sync_timer.h"
 
 #include <zephyr/kernel.h>
