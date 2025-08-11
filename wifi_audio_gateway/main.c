@@ -407,6 +407,8 @@ int main(void)
 	ret = socket_util_init();
 	ERR_CHK(ret);
 
+	/*indicate network is not connected*/
+	led_on(LED_NET_RGB, LED_COLOR_RED);
 	LOG_INF("audio_system_init");
 	ret = audio_system_init();
 	ERR_CHK(ret);

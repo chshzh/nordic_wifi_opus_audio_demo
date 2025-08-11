@@ -403,6 +403,8 @@ int main(void)
 	ret = fw_info_app_print();
 	ERR_CHK(ret);
 
+	/*indicate network is not connected*/
+	led_on(LED_NET_RGB, LED_COLOR_RED);
 	ret = socket_util_init();
 	ERR_CHK(ret);
 

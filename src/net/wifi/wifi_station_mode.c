@@ -31,6 +31,7 @@ LOG_MODULE_REGISTER(wifi_station_mode, CONFIG_LOG_DEFAULT_LEVEL);
 
 #include <dk_buttons_and_leds.h>
 #include <zephyr/logging/log_ctrl.h>
+#include "led.h"
 
 /* Define a macro for the relevant network events */
 #define L2_EVENT_MASK (NET_EVENT_WIFI_CONNECT_RESULT | NET_EVENT_WIFI_DISCONNECT_RESULT)
@@ -97,7 +98,7 @@ static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t
 		if (wifi_connected_signal == false) {
 			LOG_INF("Waiting for WiFi to be wifi_connected_signal");
 		} else {
-			dk_set_led_off(DK_LED1);
+			led_on(LED_NET_RGB, LED_COLOR_RED);
 			LOG_INF("WiFi disconnected");
 			wifi_connected_signal = false;
 		}
@@ -129,7 +130,7 @@ static void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t 
 	if (mgmt_event == NET_EVENT_IPV4_DHCP_BOUND) {
 		LOG_INF("Network DHCP bound");
 		on_net_event_dhcp_bound(cb);
-		dk_set_led_on(DK_LED1);
+		led_on(LED_NET_RGB, LED_COLOR_GREEN);
 		wifi_connected_signal = true;
 		return;
 	}

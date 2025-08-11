@@ -99,7 +99,7 @@ static void handle_wifi_ap_sta_connected(struct net_mgmt_event_callback *cb)
 
 	wifi_ap_stations_unlocked();
 	k_mutex_unlock(&wifi_ap_sta_list_lock);
-	dk_set_led_on(DK_LED1);
+	led_on(LED_NET_RGB, LED_COLOR_GREEN);
 	LOG_INF("\r\n\r\nWiFi is ready on nRF5340 Audio DK + nRF7002EK. Try to connect the "
 		"socket(udp by default)from address 192.168.1.1:60010.\r\n");
 	wifi_connected_signal = true;
@@ -133,7 +133,7 @@ static void handle_wifi_ap_sta_disconnected(struct net_mgmt_event_callback *cb)
 
 	wifi_ap_stations_unlocked();
 	k_mutex_unlock(&wifi_ap_sta_list_lock);
-	dk_set_led_off(DK_LED1);
+	led_on(LED_NET_RGB, LED_COLOR_RED);
 	wifi_connected_signal = false;
 	LOG_INF("\r\nWi-Fi is disconnected. Ready for new Wi-Fi connection.\r\n");
 	LOG_INF("\r\n\r\nRunning on WiFi SoftAP mode.\r\nPlease connect PC WiFi network to SSID "

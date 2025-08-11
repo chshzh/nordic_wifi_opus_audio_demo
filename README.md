@@ -228,6 +228,33 @@ After socket connection is established:
 2. Press **play/pause** on headset device to start/stop audio streaming
 3. Use **VOL+/-** buttons to adjust volume
 
+## 🚦 LED Status Indicators
+
+The device provides multiple LED indicators for comprehensive visual feedback about device type, network status, and streaming activity:
+
+### Device Type Indicators (RGB LED)
+
+| **LED Color** | **Device Type** | **Description** |
+|---------------|-----------------|-----------------|
+| **🟢 Green** | Audio Gateway | Device configured as audio gateway |
+| **🔵 Blue** | Headset Left Channel | Headset device configured for left audio channel |
+| **🟣 Magenta** | Headset Right Channel | Headset device configured for right audio channel |
+
+### Network Status Indicators (Network RGB LED)
+
+| **LED Color** | **Network Status** | **Description** |
+|---------------|-------------------|-----------------|
+| **🔴 Red** | Network Disconnected | Wi-Fi connection lost or not established |
+| **🟢 Green** | Network Connected | Wi-Fi connected and ready for streaming |
+
+### Streaming Activity Indicators (Blue LED)
+
+| **LED Behavior** | **Streaming Status** | **Description** |
+|------------------|---------------------|-----------------|
+| **🔵 Blinking Blue** | Audio Streaming | Audio is actively streaming between devices |
+| **🔵 Solid Blue** | Audio Paused | Audio streaming is paused but ready to resume |
+| **💡 Off** | Audio Stopped | No audio streaming activity |
+
 ## 🐛 Debugging Tips
 
 ### 1. Build Warnings

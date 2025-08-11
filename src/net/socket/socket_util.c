@@ -14,7 +14,6 @@ LOG_MODULE_REGISTER(socket_util, CONFIG_SOCKET_UTIL_MODULE_LOG_LEVEL);
 #include <zephyr/types.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/sys/reboot.h>
-#include <dk_buttons_and_leds.h>
 #include <zephyr/logging/log_ctrl.h>
 #include <zephyr/shell/shell.h>
 #include "socket_util.h"
@@ -189,10 +188,6 @@ int do_mdns_query(void)
 void socket_util_thread(void)
 {
 	int ret;
-
-	if (dk_leds_init() != 0) {
-		LOG_ERR("Failed to initialize the LED library");
-	}
 
 #if defined(CONFIG_NRF70_AP_MODE)
 	ret = wifi_softap_mode_ready();
