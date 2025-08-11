@@ -25,7 +25,7 @@ LOG_MODULE_REGISTER(socket_util, CONFIG_SOCKET_UTIL_MODULE_LOG_LEVEL);
 	do {                                                                                       \
 		LOG_ERR("Fatal error! Rebooting the device.");                                     \
 		LOG_PANIC();                                                                       \
-		IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)));                                        \
+		IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)));                                         \
 	} while (0)
 
 /* size of stack area used by each thread */
@@ -142,7 +142,7 @@ int do_mdns_query(void)
 	char addr_str[NET_IPV6_ADDR_LEN];
 	int err;
 
-	for (int i = 0; i < CONFIG_MDNS_QUERY_ATTEMPTS; i++) {
+	for (int i = 1; i <= CONFIG_MDNS_QUERY_ATTEMPTS; i++) {
 		err = getaddrinfo(CONFIG_MDNS_QUERY_NAME, NULL, &hints, &result);
 		if (!err) {
 			LOG_INF("Got address at attempt %d", i);
