@@ -24,7 +24,7 @@ LOG_MODULE_REGISTER(socket_util, CONFIG_SOCKET_UTIL_MODULE_LOG_LEVEL);
 	do {                                                                                       \
 		LOG_ERR("Fatal error! Rebooting the device.");                                     \
 		LOG_PANIC();                                                                       \
-		IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)));                                         \
+		IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)));                                        \
 	} while (0)
 
 /* size of stack area used by each thread */
