@@ -40,7 +40,11 @@ void error_handler(unsigned int reason, const struct arch_esf *esf)
 #if (CONFIG_LOG)
 	LOG_PANIC();
 #endif /* (CONFIG_LOG) */
+
+#if CONFIG_REBOOT
 	sys_reboot(SYS_REBOOT_COLD);
+#endif
+
 #endif /* (CONFIG_DEBUG) */
 	CODE_UNREACHABLE;
 }
