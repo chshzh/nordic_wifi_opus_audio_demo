@@ -43,6 +43,7 @@ zephyr_library_include_directories(
         src/modules
         src/utils
         src/utils/macros
+        src/debug
         # ${ZEPHYR_NRF_MODULE_DIR}/boards/arm/nrf5340_audio_dk_nrf5340
         )
 
@@ -55,6 +56,7 @@ add_subdirectory(src/net)
 add_subdirectory(src/drivers)
 add_subdirectory(src/modules)
 add_subdirectory(src/utils)
+add_subdirectory(src/debug)
 
 ## Cirrus Logic
 if (CONFIG_HW_CODEC_CIRRUS_LOGIC)
