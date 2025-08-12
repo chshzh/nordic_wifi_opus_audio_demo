@@ -179,6 +179,10 @@ west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_static_opus_headset --
 west flash --erase -d build_static_opus_headset
 ```
 
+### Building configuration example for nRF Connect SDK VS code extension
+
+![building configuration example](photo/building_configuration.png)
+
 ## 🎮 Operation Guide
 
 ### WiFi CREDENTIALS SHELL Example
