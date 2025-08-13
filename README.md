@@ -51,6 +51,9 @@ The demo supports the following audio streaming configurations:
 - **Copy Audio Channel**: The device HW codec can only decode one channel from sound source by default, short nRF5340 Audio DK P14 pin1 and pin2 to output it on both headphone output channels.
 - **Audio input through LINE IN** Get audio input through LINE IN. Need to add "overlay-line-in.conf" when build audio gateway firmware.
 
+The following picture shows a setup where the Audio Gateway (top) device uses LINE IN as the audio source.
+![wifi audio setup](photo/wifi_audio_setup.jpg)
+
 ### Software Requirements
 **SW:** 
 - **NCS v3.0.2** - Nordic Connect SDK
