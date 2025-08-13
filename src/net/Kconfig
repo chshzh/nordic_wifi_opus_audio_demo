@@ -4,10 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-#----------------------------------------------------------------------------#
-rsource "Kconfig.defaults"
-
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 menu "NETWORK Module"
 
 choice NETWORK_CONNECT_METHOD
@@ -24,14 +21,14 @@ endchoice # NETWORK_CONNECTION_METHOD
 
 endmenu #"NETWORK Module"
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 rsource "socket/Kconfig.socket_util_module"
 
 if (CONNECT_WITH_WIFI)
         rsource "wifi/Kconfig.wifi_module"
 endif # CONNECT_WITH_WIFI
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 module = NETWORK_MODULE
 module-str = NETWORK module
 source "subsys/logging/Kconfig.template.log_config"

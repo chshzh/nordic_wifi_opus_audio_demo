@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 rsource "Kconfig.defaults"
 
 menu "WiFi Audio Transceiver"
@@ -42,7 +42,7 @@ rsource "src/modules/Kconfig"
 rsource "src/utils/Kconfig"
 rsource "src/debug/Kconfig"
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 menu "Logging"
 
 module = MAIN

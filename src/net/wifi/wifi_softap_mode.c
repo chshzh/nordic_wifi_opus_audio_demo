@@ -13,13 +13,12 @@ LOG_MODULE_REGISTER(wifi_softap_mode, CONFIG_LOG_DEFAULT_LEVEL);
 #include <zephyr/net/dhcpv4_server.h>
 
 #include <net/wifi_ready.h>
+#include "led.h"
 
 #define WIFI_SAP_MGMT_EVENTS (NET_EVENT_WIFI_AP_ENABLE_RESULT)
 
 static K_SEM_DEFINE(wifi_ready_state_changed_sem, 0, 1);
 static bool wifi_ready_status;
-
-#include <dk_buttons_and_leds.h>
 
 static volatile bool wifi_connected_signal;
 

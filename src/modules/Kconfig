@@ -17,7 +17,7 @@ config AUDIO_SYNC_TIMER_USES_RTC
 	default y
 	select NRFX_RTC0
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 menuconfig NRF5340_AUDIO_POWER_MEASUREMENT
 	bool "Power measurement"
 	help
@@ -43,7 +43,7 @@ config POWER_MEAS_START_ON_BOOT
 
 endif # NRF5340_AUDIO_POWER_MEASUREMENT
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 menu "I2S"
 
 config I2S_LRCK_FREQ_HZ
@@ -63,7 +63,7 @@ config I2S_CH_NUM
 
 endmenu # I2S
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 menu "Log levels"
 
 module = MODULE_AUDIO_USB
@@ -100,7 +100,7 @@ source "subsys/logging/Kconfig.template.log_config"
 
 endmenu # Log levels
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 menu "Thread priorities"
 
 config POWER_MEAS_THREAD_PRIO
@@ -125,7 +125,7 @@ config VOLUME_MSG_SUB_THREAD_PRIO
 
 endmenu # Thread priorities
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 menu "Stack sizes"
 
 config POWER_MEAS_STACK_SIZE
@@ -142,7 +142,7 @@ config VOLUME_MSG_SUB_STACK_SIZE
 
 endmenu # Stack sizes
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 menu "Zbus"
 
 config VOLUME_MSG_SUB_QUEUE_SIZE
@@ -151,7 +151,7 @@ config VOLUME_MSG_SUB_QUEUE_SIZE
 
 endmenu # Zbus
 
-#----------------------------------------------------------------------------#
+#------------------------------------------------------------------------#
 config NRF5340_AUDIO_SD_CARD_MODULE
 	bool "Audio SD Card Module"
 	help

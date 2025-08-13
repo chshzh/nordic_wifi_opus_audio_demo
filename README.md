@@ -49,7 +49,7 @@ The demo supports the following audio streaming configurations:
 ### Optional Hardware Modifications for Wi-Fi Audio Headset Device
 - **Enable Battery Power**: Connect nRF7002EK V5V pin to nRF5340 Audio DK TP30 testpoint.
 - **Copy Audio Channel**: The device HW codec can only decode one channel from sound source by default, short nRF5340 Audio DK P14 pin1 and pin2 to output it on both headphone output channels.
-- **Audio input through LINE IN** Get audio input through LINE IN. Need to add "overlay-line-in.conf" when build audio gateway firmware.
+- **Audio input through LINE IN** Get audio input through LINE IN. Need to add "overlay-gateway-linein.conf" when build audio gateway firmware.
 
 The following picture shows a setup where the Audio Gateway (top) device uses LINE IN as the audio source.
 ![wifi audio setup](photo/wifi_audio_setup.jpg)
@@ -123,7 +123,7 @@ The sample supports multiple build configurations through overlay files:
 - **`overlay-audio-headset.conf`** - Configure device as audio headset
 - **`overlay-tcp.conf`** - Use TCP instead of UDP for audio streaming
 - **`overlay-wifi-sta-static.conf`** - Use static Wi-Fi credentials
-- **`overlay-line-in.conf`** - Enable gateway device to use LINE IN as audio input instead of USB
+- **`overlay-gateway-linein.conf`** - Enable gateway device to use LINE IN as audio input instead of USB
 
 ## 📋 Building
 
@@ -139,7 +139,7 @@ west flash --erase -d build_opus_gateway
 
 **Gateway LINE IN Audio Source:**
 ```bash
-west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf;overlay-line-in.conf"
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-linein.conf"
 west flash --erase -d build_opus_gateway
 ```
 
