@@ -26,7 +26,6 @@
 #include "streamctrl.h"
 #include "socket_utils.h"
 #include "wifi_audio_rx.h"
-#include <zephyr/bluetooth/audio/audio.h>
 
 #include <zephyr/logging/log.h>
 #include <zephyr/zbus/zbus.h>
@@ -45,7 +44,6 @@ ZBUS_MSG_SUBSCRIBER_DEFINE(le_audio_evt_sub);
 
 ZBUS_CHAN_DECLARE(button_chan);
 ZBUS_CHAN_DECLARE(le_audio_chan);
-ZBUS_CHAN_DECLARE(bt_mgmt_chan);
 
 ZBUS_OBS_DECLARE(sdu_ref_msg_listen);
 
@@ -54,8 +52,6 @@ static struct k_thread le_audio_msg_sub_thread_data;
 
 static k_tid_t button_msg_sub_thread_id;
 static k_tid_t le_audio_msg_sub_thread_id;
-
-struct bt_le_ext_adv *ext_adv;
 
 K_THREAD_STACK_DEFINE(button_msg_sub_thread_stack, CONFIG_BUTTON_MSG_SUB_STACK_SIZE);
 K_THREAD_STACK_DEFINE(le_audio_msg_sub_thread_stack, CONFIG_LE_AUDIO_MSG_SUB_STACK_SIZE);

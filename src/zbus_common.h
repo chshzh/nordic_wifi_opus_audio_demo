@@ -7,7 +7,18 @@
 #ifndef _ZBUS_COMMON_H_
 #define _ZBUS_COMMON_H_
 
+#ifdef CONFIG_BT
 #include <zephyr/bluetooth/audio/audio.h>
+#else
+/* WiFi audio definitions - no Bluetooth dependencies */
+struct bt_conn;
+struct bt_le_per_adv_sync;
+struct bt_le_ext_adv;
+enum bt_audio_dir {
+	BT_AUDIO_DIR_SINK,
+	BT_AUDIO_DIR_SOURCE,
+};
+#endif
 
 #define ZBUS_READ_TIMEOUT_MS    K_MSEC(100)
 #define ZBUS_ADD_OBS_TIMEOUT_MS K_MSEC(200)
