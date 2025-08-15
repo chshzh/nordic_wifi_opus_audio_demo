@@ -13,6 +13,7 @@ LOG_MODULE_REGISTER(socket_utils, CONFIG_SOCKET_UTILS_LOG_LEVEL);
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
 #include <zephyr/net/socket.h>
+#include <zephyr/net/conn_mgr_connectivity.h>
 #include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log_ctrl.h>
 #include <zephyr/shell/shell.h>
