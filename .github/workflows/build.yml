@@ -48,7 +48,7 @@ jobs:
             description: "Wi-Fi Opus Audio Gateway device with USB audio source"
           - name: "Wi-Fi Opus Audio Gateway LINE IN"
             build_dir: "build_opus_gateway_linein"
-            overlay: "overlay-opus.conf;overlay-audio-gateway.conf;overlay-line-in.conf"
+            overlay: "overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-linein.conf"
             description: "Wi-Fi Opus Audio Gateway device with LINE IN audio source"
           - name: "Wi-Fi Opus Audio Headset"
             build_dir: "build_opus_headset"
