@@ -24,7 +24,7 @@
 
 #include "fw_info_app.h"
 #include "streamctrl.h"
-#include "socket_util.h"
+#include "socket_utils.h"
 #include "wifi_audio_rx.h"
 #include <zephyr/bluetooth/audio/audio.h>
 
@@ -117,7 +117,7 @@ void socket_rx_handler(uint8_t *socket_rx_buf, size_t len)
 void streamctrl_send(void const *const data, size_t size)
 {
 	if (strm_state == STATE_STREAMING) {
-		socket_util_tx_data((uint8_t *)data, size);
+		socket_utils_tx_data((uint8_t *)data, size);
 	}
 }
 
@@ -324,20 +324,20 @@ static int zbus_link_producers_observers(void)
 	return 0;
 }
 
-K_THREAD_STACK_DEFINE(socket_util_thread_stack, CONFIG_SOCKET_STACK_SIZE);
-static struct k_thread socket_util_thread_data;
-static k_tid_t socket_util_thread_id;
+K_THREAD_STACK_DEFINE(socket_utils_thread_stack, CONFIG_SOCKET_STACK_SIZE);
+static struct k_thread socket_utils_thread_data;
+static k_tid_t socket_utils_thread_id;
 
-int socket_util_init(void)
+int socket_utils_init(void)
 {
 	int ret;
 	/* Start thread to handle events from socket connection */
-	socket_util_thread_id = k_thread_create(
-		&socket_util_thread_data, socket_util_thread_stack, CONFIG_SOCKET_STACK_SIZE,
-		(k_thread_entry_t)socket_util_thread, NULL, NULL, NULL,
-		K_PRIO_PREEMPT(CONFIG_SOCKET_UTIL_THREAD_PRIO), 0, K_NO_WAIT);
-	ret = k_thread_name_set(socket_util_thread_id, "SOCKET");
-	socket_util_set_rx_callback(socket_rx_handler);
+	socket_utils_thread_id = k_thread_create(
+		&socket_utils_thread_data, socket_utils_thread_stack, CONFIG_SOCKET_STACK_SIZE,
+		(k_thread_entry_t)socket_utils_thread, NULL, NULL, NULL,
+		K_PRIO_PREEMPT(CONFIG_SOCKET_UTILS_THREAD_PRIO), 0, K_NO_WAIT);
+	ret = k_thread_name_set(socket_utils_thread_id, "SOCKET");
+	socket_utils_set_rx_callback(socket_rx_handler);
 	return ret;
 }
 
@@ -360,8 +360,8 @@ int main(void)
 	ret = fw_info_app_print();
 	ERR_CHK(ret);
 
-	LOG_INF("socket_util_init");
-	ret = socket_util_init();
+	LOG_INF("socket_utils_init");
+	ret = socket_utils_init();
 	ERR_CHK(ret);
 
 	/*indicate network is not connected*/

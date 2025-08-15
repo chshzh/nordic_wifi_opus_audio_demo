@@ -22,7 +22,7 @@
 #include "audio_datapath.h"
 #include "fw_info_app.h"
 #include "streamctrl.h"
-#include "socket_util.h"
+#include "socket_utils.h"
 #include "wifi_audio_rx.h"
 #include "hw_codec.h"
 #include <zephyr/logging/log.h>
@@ -324,21 +324,21 @@ static int zbus_link_producers_observers(void)
 	return 0;
 }
 
-K_THREAD_STACK_DEFINE(socket_util_thread_stack, CONFIG_SOCKET_STACK_SIZE);
-static struct k_thread socket_util_thread_data;
-static k_tid_t socket_util_thread_id;
+K_THREAD_STACK_DEFINE(socket_utils_thread_stack, CONFIG_SOCKET_STACK_SIZE);
+static struct k_thread socket_utils_thread_data;
+static k_tid_t socket_utils_thread_id;
 
-int socket_util_init(void)
+int socket_utils_init(void)
 {
 	int ret;
 	/* Start thread to handle events from socket connection */
-	socket_util_thread_id = k_thread_create(
-		&socket_util_thread_data, socket_util_thread_stack, CONFIG_SOCKET_STACK_SIZE,
-		(k_thread_entry_t)socket_util_thread, NULL, NULL, NULL,
-		K_PRIO_PREEMPT(CONFIG_SOCKET_UTIL_THREAD_PRIO), 0, K_NO_WAIT);
+	socket_utils_thread_id = k_thread_create(
+		&socket_utils_thread_data, socket_utils_thread_stack, CONFIG_SOCKET_STACK_SIZE,
+		(k_thread_entry_t)socket_utils_thread, NULL, NULL, NULL,
+		K_PRIO_PREEMPT(CONFIG_SOCKET_UTILS_THREAD_PRIO), 0, K_NO_WAIT);
 
-	ret = k_thread_name_set(socket_util_thread_id, "SOCKET");
-	socket_util_set_rx_callback(wifi_audio_rx_data_handler);
+	ret = k_thread_name_set(socket_utils_thread_id, "SOCKET");
+	socket_utils_set_rx_callback(wifi_audio_rx_data_handler);
 	return ret;
 }
 
@@ -363,7 +363,7 @@ int main(void)
 
 	/*indicate network is not connected*/
 	led_on(LED_NET_RGB, LED_COLOR_RED);
-	ret = socket_util_init();
+	ret = socket_utils_init();
 	ERR_CHK(ret);
 
 	LOG_INF("audio_system_init");

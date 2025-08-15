@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(socket_util, CONFIG_SOCKET_UTIL_MODULE_LOG_LEVEL);
+LOG_MODULE_REGISTER(socket_utils, CONFIG_SOCKET_UTILS_LOG_LEVEL);
 
 #include <errno.h>
 #include <stddef.h>
@@ -16,16 +16,11 @@ LOG_MODULE_REGISTER(socket_util, CONFIG_SOCKET_UTIL_MODULE_LOG_LEVEL);
 #include <zephyr/sys/reboot.h>
 #include <zephyr/logging/log_ctrl.h>
 #include <zephyr/shell/shell.h>
-#include "socket_util.h"
+#include "socket_utils.h"
+#include "net_event_mgmt.h"
+#include "wifi_utils.h"
 
 #include <zephyr/net/dns_resolve.h>
-
-#define FATAL_ERROR()                                                                              \
-	do {                                                                                       \
-		LOG_ERR("Fatal error! Rebooting the device.");                                     \
-		LOG_PANIC();                                                                       \
-		IF_ENABLED(CONFIG_REBOOT, (sys_reboot(0)));                                        \
-	} while (0)
 
 /* size of stack area used by each thread */
 #define STACKSIZE 8192
@@ -36,8 +31,9 @@ LOG_MODULE_REGISTER(socket_util, CONFIG_SOCKET_UTIL_MODULE_LOG_LEVEL);
 #define socket_port 60010 // use for either udp or tcp server
 
 /**********External Resources START**************/
-extern int wifi_station_mode_ready(void);
-extern int wifi_softap_mode_ready(void);
+#if IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_AP)
+extern struct k_sem station_connected_sem;
+#endif
 /**********External Resources END**************/
 #if defined(CONFIG_SOCKET_TYPE_TCP)
 int tcp_server_listen_fd;
@@ -51,8 +47,6 @@ char target_addr_str[32];
 struct sockaddr_in target_addr;
 socklen_t target_addr_len = sizeof(target_addr);
 
-enum wifi_modes wifi_mode = WIFI_STATION_MODE;
-
 static socket_receive_t socket_receive;
 
 K_MSGQ_DEFINE(socket_recv_queue, sizeof(socket_receive), 1, 4);
@@ -65,7 +59,7 @@ volatile bool serveraddr_set_signall = false;
 
 volatile bool socket_connected_signall = false;
 
-void socket_util_set_rx_callback(net_util_socket_rx_callback_t socket_rx_callback)
+void socket_utils_set_rx_callback(net_util_socket_rx_callback_t socket_rx_callback)
 {
 	socket_rx_cb = socket_rx_callback;
 
@@ -77,7 +71,7 @@ void socket_util_set_rx_callback(net_util_socket_rx_callback_t socket_rx_callbac
 	}
 }
 
-static void socket_util_trigger_rx_callback_if_set(void)
+static void socket_utils_trigger_rx_callback_if_set(void)
 {
 	LOG_DBG("Socket received %d bytes", socket_receive.len);
 	// LOG_HEXDUMP_DBG(socket_receive.buf, socket_receive.len, "Buffer contents(HEX):");
@@ -88,7 +82,7 @@ static void socket_util_trigger_rx_callback_if_set(void)
 	}
 }
 
-int socket_util_tx_data(uint8_t *data, size_t length)
+int socket_utils_tx_data(uint8_t *data, size_t length)
 {
 
 	size_t chunk_size = 1024;
@@ -121,7 +115,6 @@ int socket_util_tx_data(uint8_t *data, size_t length)
 			//         close(udp_socket);
 			//     #endif
 
-			FATAL_ERROR();
 			return bytes_sent;
 		}
 
@@ -185,22 +178,80 @@ int do_mdns_query(void)
 #endif /* CONFIG_MDNS_RESOLVER */
 
 /* Thread to setup WiFi, Sockets step by step */
-void socket_util_thread(void)
+void socket_utils_thread(void)
 {
 	int ret;
 
-#if defined(CONFIG_NRF70_AP_MODE)
-	ret = wifi_softap_mode_ready();
-#else
-	ret = wifi_station_mode_ready();
-#endif
+	ret = init_network_events();
+	if (ret) {
+		LOG_ERR("Failed to initialize network events: %d", ret);
+		return;
+	}
+	k_sem_take(&wpa_supplicant_ready_sem, K_FOREVER);
 
-	if (ret < 0) {
-		LOG_ERR("wifi network connection is not ready, error: %d", -errno);
-		FATAL_ERROR();
+#if IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_AP)
+	/* Device in SoftAP mode */
+	LOG_INF("Wi-Fi Mode: SoftAP mode");
+
+	ret = wifi_run_softap_mode();
+	if (ret) {
+		LOG_ERR("Failed to setup SoftAP mode: %d", ret);
+
 		return;
 	}
 
+	/* Wait for SoftAP to be enabled and network ready */
+	ret = k_sem_take(&ipv4_dhcp_bond_sem, K_FOREVER);
+	if (ret != 0) {
+		LOG_ERR("Failed to wait for SoftAP network setup: %d", ret);
+
+		return;
+	}
+
+	/* Print detailed WiFi status when connected */
+	wifi_print_status();
+
+	LOG_INF("SoftAP setup complete, waiting for station to connect...");
+	LOG_INF("SSID: %s", CONFIG_SOFTAP_SSID);
+	LOG_INF("Password: %s", CONFIG_SOFTAP_PASSWORD);
+	LOG_INF("Socket server will start once a station connects");
+
+	/* Wait for a station to connect before starting socket server */
+	ret = k_sem_take(&station_connected_sem, K_FOREVER);
+	if (ret) {
+		LOG_ERR("Error waiting for station connection: %d", ret);
+
+		return;
+	}
+
+	LOG_INF("Station connected! Starting socket server...");
+
+#else
+	/* Device in station mode */
+	LOG_INF("Wi-Fi Mode: Station mode");
+#if IS_ENABLED(CONFIG_WIFI_CREDENTIALS_STATIC)
+	LOG_INF("Static Wi-Fi credentials configured for connection.");
+#elif IS_ENABLED(CONFIG_WIFI_CREDENTIALS_SHELL)
+	LOG_INF("Please use \"wifi cred\" shell commands set up Wi-Fi connection.");
+#else
+	LOG_INF("No Proper Wi-Fi credentials configured, try to configure with "
+		"CONFIG_WIFI_CREDENTIALS_STATIC or CONFIG_WIFI_CREDENTIALS_SHELL");
+#endif /* IS_ENABLED(CONFIG_WIFI_CREDENTIALS_STATIC) */
+	ret = conn_mgr_all_if_connect(true);
+	if (ret) {
+		LOG_ERR("Failed to initiate network connection: %d", ret);
+		return;
+	}
+	ret = k_sem_take(&ipv4_dhcp_bond_sem, K_FOREVER);
+	if (ret != 0) {
+		LOG_ERR("Failed to wait for network connectivity: %d", ret);
+
+		return;
+	}
+
+	LOG_INF("Network connectivity established, setting up sockets...");
+
+#endif /* IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_AP) */
 	self_addr.sin_family = AF_INET;
 	self_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	self_addr.sin_port = htons(socket_port);
@@ -238,7 +289,7 @@ void socket_util_thread(void)
 	ret = connect(tcp_client_socket, (struct sockaddr *)&target_addr, sizeof(target_addr));
 	if (ret < 0) {
 		LOG_ERR("connect, error: %d", -errno);
-		FATAL_ERROR();
+
 		return;
 	}
 	LOG_INF("Connected to TCP server\n");
@@ -247,7 +298,7 @@ void socket_util_thread(void)
 		socket_receive.len =
 			recv(tcp_client_socket, socket_receive.buf, BUFFER_MAX_SIZE, 0);
 		if (socket_receive.len > 0) {
-			socket_util_trigger_rx_callback_if_set();
+			socket_utils_trigger_rx_callback_if_set();
 		} else if (socket_receive.len == -1) {
 			LOG_ERR("Receiving failed");
 			close(tcp_client_socket);
@@ -261,28 +312,28 @@ void socket_util_thread(void)
 
 	if (tcp_server_listen_fd < 0) {
 		LOG_ERR("Failed to create socket: %d", -errno);
-		FATAL_ERROR();
+
 		return;
 	}
 
 	ret = bind(tcp_server_listen_fd, (struct sockaddr *)&self_addr, sizeof(self_addr));
 	if (ret < 0) {
 		LOG_ERR("bind, error: %d", -errno);
-		FATAL_ERROR();
+
 		return;
 	}
 
 	ret = listen(tcp_server_listen_fd, 5);
 	if (ret < 0) {
 		LOG_ERR("listen, error: %d", -errno);
-		FATAL_ERROR();
+
 		return;
 	}
 	tcp_server_socket =
 		accept(tcp_server_listen_fd, (struct sockaddr *)&target_addr, &target_addr_len);
 	if (tcp_server_socket < 0) {
 		LOG_ERR("accept, error: %d", -errno);
-		FATAL_ERROR();
+
 		return;
 	}
 	LOG_INF("Accepted connection from client\n");
@@ -296,7 +347,7 @@ void socket_util_thread(void)
 		socket_receive.len =
 			recv(tcp_server_socket, socket_receive.buf, BUFFER_MAX_SIZE, 0);
 		if (socket_receive.len > 0) {
-			socket_util_trigger_rx_callback_if_set();
+			socket_utils_trigger_rx_callback_if_set();
 		} else if (socket_receive.len == -1) {
 			LOG_ERR("Receiving failed");
 			close(tcp_server_socket);
@@ -314,13 +365,13 @@ void socket_util_thread(void)
 	udp_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (udp_socket < 0) {
 		LOG_ERR("Failed to create socket: %d", -errno);
-		FATAL_ERROR();
+
 		return;
 	}
 	ret = bind(udp_socket, (struct sockaddr *)&self_addr, sizeof(self_addr));
 	if (ret < 0) {
 		LOG_ERR("bind, error: %d", -errno);
-		FATAL_ERROR();
+
 		return;
 	}
 
@@ -334,7 +385,7 @@ void socket_util_thread(void)
 				ntohs(target_addr.sin_port));
 			socket_connected_signall = true;
 		}
-		socket_util_trigger_rx_callback_if_set();
+		socket_utils_trigger_rx_callback_if_set();
 	}
 	if (socket_receive.len == -1) {
 		LOG_ERR("Receiving failed");

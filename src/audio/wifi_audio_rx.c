@@ -12,7 +12,7 @@
 #include "audio_system.h"
 #include "audio_sync_timer.h"
 #include "wifi_audio_rx.h"
-#include "socket_util.h"
+#include "socket_utils.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(wifi_audio_rx, CONFIG_WIFI_AUDIO_RX_LOG_LEVEL);
@@ -292,7 +292,7 @@ void send_audio_command(uint8_t audio_command)
 	};
 
 	size_t packet_size = sizeof(command_packet); // Calculate packet size
-	socket_util_tx_data((uint8_t *)command_packet, packet_size);
+	socket_utils_tx_data((uint8_t *)command_packet, packet_size);
 }
 
 void send_audio_frame(uint8_t *audio_data, size_t data_length)
@@ -320,7 +320,7 @@ void send_audio_frame(uint8_t *audio_data, size_t data_length)
 	data_packet[total_packet_size - 1] = END_SEQUENCE_2; // 0xBB
 
 	// Send the prepared data packet
-	socket_util_tx_data(data_packet, total_packet_size);
+	socket_utils_tx_data(data_packet, total_packet_size);
 
 	// Free allocated memory
 	k_free(data_packet);

@@ -18,21 +18,10 @@ This project demonstrates how to use Wi-Fi with UDP/TCP sockets for real-time au
 - **Real-time Audio Streaming**: Low-latency audio transfer over Wi-Fi networks
 - **Opus Codec Integration**: Efficient audio compression with configurable bitrates (6kbps to 320kbps)
 - **Flexible Network Protocols**: Support for both UDP and TCP sockets
-- **Multiple Wi-Fi Modes**: Station mode with credential shell or static configuration
+- **Multiple Wi-Fi Modes**: Station mode with credential shell and static configuration
 - **Dual Device Setup**: Audio Gateway and Headset device roles
 - **Battery Power Support**: Optional battery operation for headset device
-- **mDNS Discovery**: Automatic device discovery within the same network
-
-## 🧪 Test Scenarios
-
-The demo supports the following audio streaming configurations:
-
-| **Configuration** | **Gateway** | **Headset** | **Features** |
-|-------------------|-------------|-------------|--------------|
-| Basic Audio | UDP/TCP streaming | Audio playback | Standard audio streaming |
-| Opus Compressed | Opus + UDP/TCP | Opus decode + playback | Compressed audio with quality control |
-| Static Wi-Fi | Pre-configured credentials | Auto-connect | No runtime credential input |
-| Shell Wi-Fi | Runtime credential input | Auto-discovery | Flexible network setup |
+- **mDNS Discovery**: Automatic device discovery within the same network (Need mDNS support in local network)
 
 ## 🔧 Hardware Requirements
 
@@ -48,7 +37,7 @@ The demo supports the following audio streaming configurations:
 
 ### Optional Hardware Modifications for Wi-Fi Audio Headset Device
 - **Enable Battery Power**: Connect nRF7002EK V5V pin to nRF5340 Audio DK TP30 testpoint.
-- **Copy Audio Channel**: The device HW codec can only decode one channel from sound source by default, short nRF5340 Audio DK P14 pin1 and pin2 to output it on both headphone output channels.
+- **Copy Audio Channel**: The device HW codec can only decode one channel from sound source, short nRF5340 Audio DK P14 pin1 and pin2 to output it on both headphone output channels.
 - **Audio input through LINE IN** Get audio input through LINE IN. Need to add "overlay-gateway-linein.conf" when build audio gateway firmware.
 
 The following picture shows a setup where the Audio Gateway (top) device uses LINE IN as the audio source.
@@ -129,7 +118,7 @@ The sample supports multiple build configurations through overlay files:
 
 Here are some building examples:
 
-###  Recommended: Wi-Fi Opus Audio (Dynamic Credentials)
+###  Recommended: WiFi Station Mode + WiFi CREDENTIALS SHELL (for SSID+Password Input) + UDP + Opus Audio
 
 **Gateway USB Audio Source:**
 ```bash
@@ -149,7 +138,7 @@ west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_headset -- -DSHIE
 west flash --erase -d build_opus_headset
 ```
 
-### 📶 WiFi Station Mode + WiFi CREDENTIALS SHELL (for SSID+Password Input) + UDP + Raw PCM Audio
+### WiFi Station Mode + WiFi CREDENTIALS SHELL (for SSID+Password Input) + UDP + Raw PCM Audio
 
 **Gateway:**
 ```bash
@@ -162,7 +151,7 @@ west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_headset -- -DSHIELD="n
 west flash --erase -d build_headset
 ```
 
-### 🔒 WiFi Station Mode + Static SSID & PASSWORD + UDP
+### 🔒 WiFi Station Mode + Static SSID & PASSWORD + UDP + Opus Audio
 
 **Gateway:**
 ```bash
@@ -188,7 +177,7 @@ west flash --erase -d build_static_opus_headset
 
 ## 🎮 Operation Guide
 
-### WiFi CREDENTIALS SHELL Example
+### WiFi CREDENTIALS SHELL Example (Station Mode)
 
 #### 1) Connect WiFi Gateway and Audio Devices with WiFi Router
 
@@ -262,7 +251,7 @@ The device provides multiple LED indicators for comprehensive visual feedback ab
 | **🔵 Solid Blue** | Audio Paused | Audio streaming is paused but ready to resume |
 | **💡 Off** | Audio Stopped | No audio streaming activity |
 
-## 🐛 Debugging Tips
+## �🐛 Debugging Tips
 
 ### 1. Build Warnings
 Fix building warning "Setting build type to 'MinSizeRel' as none was specified.": 
