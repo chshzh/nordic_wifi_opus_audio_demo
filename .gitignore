@@ -53,6 +53,7 @@ dkms.conf
 
 # build
 **/build*/
+**/temp*/
 
 .vscode/
 .DS_STORE
