@@ -13,6 +13,7 @@
 
 #include "net_event_mgmt.h"
 #include "wifi_utils.h"
+#include "led.h"
 
 LOG_MODULE_REGISTER(net_event_mgmt, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -325,6 +326,7 @@ static void l3_ipv4_event_handler(struct net_mgmt_event_callback *cb, uint32_t m
 	switch (mgmt_event) {
 	case NET_EVENT_IPV4_DHCP_BOUND:
 		LOG_INF("Network DHCP bound!");
+		led_on(LED_NET_RGB, LED_COLOR_GREEN, LED_SOLID);
 		/* Print IP address information */
 		wifi_print_dhcp_ip(cb);
 		/* Signal network connectivity */
