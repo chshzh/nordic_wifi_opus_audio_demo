@@ -643,8 +643,7 @@ static void audio_datapath_i2s_blk_complete(uint32_t frame_start_ts_us, uint32_t
 				ctrl_blk.out.cons_blk_idx = next_out_blk_idx;
 				if (underrun_condition) {
 					underrun_condition = false;
-					LOG_WRN("Data received, total under-runs: %d",
-						ctrl_blk.out.total_blk_underruns);
+					ctrl_blk.out.total_blk_underruns = 0;
 				}
 
 				tx_buf = (uint8_t *)&ctrl_blk.out
@@ -695,7 +694,7 @@ static void audio_datapath_i2s_blk_complete(uint32_t frame_start_ts_us, uint32_t
 		ret = data_fifo_pointer_first_vacant_get(ctrl_blk.in.fifo, (void **)&rx_buf,
 							 K_NO_WAIT);
 		if (ret == 0 && prev_ret == -ENOMEM) {
-			LOG_WRN("I2S RX continuing stream");
+			LOG_INF("I2S RX continuing stream");
 			prev_ret = ret;
 		}
 
@@ -705,7 +704,7 @@ static void audio_datapath_i2s_blk_complete(uint32_t frame_start_ts_us, uint32_t
 			size_t size;
 
 			if (ret != prev_ret) {
-				LOG_WRN("I2S RX overrun. Single msg");
+				LOG_DBG("I2S RX overrun. Single msg");
 				prev_ret = ret;
 			}
 

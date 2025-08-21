@@ -42,7 +42,7 @@ struct audio_pcm_data_t {
 	uint8_t data[1920];
 };
 
-#define CONFIG_BUF_WIFI_RX_PACKET_NUM 5
+#define CONFIG_BUF_WIFI_RX_PACKET_NUM 10
 
 DATA_FIFO_DEFINE(wifi_audio_rx, CONFIG_BUF_WIFI_RX_PACKET_NUM, sizeof(struct audio_pcm_data_t));
 
@@ -89,15 +89,16 @@ void audio_data_frame_process(uint8_t *p_data, size_t data_size)
 	// 		rx_stats[channel_index].data_size_mismatch_cnt);
 	// }
 
-	if (stream_state_get() != STATE_STREAMING) {
-		/* Throw away data */
-		num_thrown++;
-		if ((num_thrown % 100) == 1) {
-			LOG_WRN("Not in streaming state (%d), thrown %d packet(s)",
-				stream_state_get(), num_thrown);
-		}
-		return;
-	}
+	// if (stream_state_get() != STATE_STREAMING) {
+	// 	/* Throw away data */
+	// 	num_thrown++;
+	// 	if ((num_thrown % 100) == 1) {
+	// 		LOG_WRN("Not in streaming state (%d), thrown %d packet(s). Please press "
+	// 			"play button.",
+	// 			stream_state_get(), num_thrown);
+	// 	}
+	// 	return;
+	// }
 
 	// if (channel_index != AUDIO_CH_L && IS_ENABLED(CONFIG_AUDIO_GATEWAY)) {
 	// 	/* Only left channel RX data in use on gateway */
@@ -115,7 +116,7 @@ void audio_data_frame_process(uint8_t *p_data, size_t data_size)
 		num_overruns++;
 
 		if ((num_overruns % 100) == 1) {
-			LOG_WRN("BLE ISO RX overrun: Num: %d", num_overruns);
+			LOG_DBG("WiFI RX FIFO overrun: Num: %d", num_overruns);
 		}
 
 		ret = data_fifo_pointer_last_filled_get(&wifi_audio_rx, &stale_data, &stale_size,
