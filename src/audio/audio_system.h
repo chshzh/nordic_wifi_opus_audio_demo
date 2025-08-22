@@ -108,4 +108,20 @@ int audio_system_decoder_num_ch_get(void);
  */
 int audio_system_init(void);
 
+#if defined(CONFIG_LATENCY_MEASUREMENT) && defined(CONFIG_AUDIO_GATEWAY)
+/**
+ * @brief	Audio source simulator for latency measurement testing.
+ *
+ * @note	This function simulates an audio source by filling the RX FIFO
+ *		buffer with test audio data at configured intervals. This replaces
+ *		the need for actual USB or I2S hardware audio input during testing.
+ *		The generated audio data goes through the normal encoding and
+ *		transmission pipeline. Frame count and interval are configurable
+ *		via Kconfig.
+ *
+ * @return	0 on success, error otherwise.
+ */
+int audio_system_latency_meas_frame_generate(void);
+#endif /* CONFIG_LATENCY_MEASUREMENT && CONFIG_AUDIO_GATEWAY */
+
 #endif /* _AUDIO_SYSTEM_H_ */

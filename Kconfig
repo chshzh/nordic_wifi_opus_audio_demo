@@ -43,6 +43,58 @@ rsource "src/utils/Kconfig"
 rsource "src/debug/Kconfig"
 
 #------------------------------------------------------------------------#
+menu "Latency Measurement"
+
+config LATENCY_MEASUREMENT
+	bool "Enable GPIO-based latency measurement system"
+	default n
+	help
+	  Enable the latency measurement system that uses GPIO pins to generate
+	  timing pulses for external measurement equipment like PPK2.
+	  This tracks 8 timing points (T1-T8) across the audio pipeline.
+
+config LATENCY_MEASUREMENT_FRAME_COUNT
+	int "Number of frames for automated test"
+	default 10
+	range 1 100
+	depends on LATENCY_MEASUREMENT
+	help
+	  Number of frames to generate during automated latency test
+	  triggered by button press. Each frame goes through the complete
+	  audio pipeline with timing measurements.
+
+config LATENCY_MEASUREMENT_FRAME_INTERVAL
+	int "Interval between test frames (ms)"
+	default 1000
+	range 100 10000
+	depends on LATENCY_MEASUREMENT
+	help
+	  Time interval in milliseconds between each test frame during
+	  automated latency measurement. Longer intervals provide better
+	  separation for analysis but increase total test time.
+
+config LATENCY_PULSE_DURATION_MS
+	int "GPIO pulse duration (milliseconds)"
+	default 100
+	range 1 1000
+	depends on LATENCY_MEASUREMENT
+	help
+	  Duration of GPIO timing pulses in milliseconds. Should be long
+	  enough for reliable detection by measurement equipment but short
+	  enough to minimize system impact.
+
+config LATENCY_MEASUREMENT_DEBUG
+	bool "Enable debug output for timing events"
+	default n
+	depends on LATENCY_MEASUREMENT
+	help
+	  Enable detailed logging of timing events for debugging the
+	  latency measurement system. Useful for verifying correct
+	  timing point triggers.
+
+endmenu # "Latency Measurement"
+
+#------------------------------------------------------------------------#
 menu "Logging"
 
 module = MAIN

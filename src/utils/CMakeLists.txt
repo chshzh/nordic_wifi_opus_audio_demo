@@ -10,6 +10,13 @@ target_sources(app PRIVATE
 	       ${CMAKE_CURRENT_SOURCE_DIR}/uicr.c
 )
 
+if (CONFIG_LATENCY_MEASUREMENT)
+# Add latency measurement source file (compiled conditionally based on CONFIG)
+target_sources(app PRIVATE
+	       ${CMAKE_CURRENT_SOURCE_DIR}/../latency_measure.c
+)
+endif()
+
 target_sources_ifdef(CONFIG_BOARD_NRF5340_AUDIO_DK_NRF5340_CPUAPP app PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/nrf5340_audio_dk.c
 		${CMAKE_CURRENT_SOURCE_DIR}/board_version.c)

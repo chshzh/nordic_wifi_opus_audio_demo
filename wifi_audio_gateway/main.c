@@ -21,7 +21,9 @@
 #include "macros_common.h"
 #include "audio_system.h"
 #include "audio_datapath.h"
-
+#ifdef CONFIG_LATENCY_MEASUREMENT
+#include "latency_measure.h"
+#endif
 #include "fw_info_app.h"
 #include "streamctrl.h"
 #include "socket_utils.h"
@@ -98,6 +100,15 @@ void socket_rx_handler(uint8_t *socket_rx_buf, size_t len)
 				stream_state_set(STATE_PAUSED);
 				led_on(LED_APP_1_BLUE);
 				break;
+#ifdef CONFIG_LATENCY_MEASUREMENT
+			case AUDIO_LATENCY_TEST_CMD:
+				LOG_INF("LATENCY_TEST Command received\n");
+				stream_state_set(STATE_STREAMING);
+				/* Generate a test audio frame for latency measurement */
+				audio_system_latency_meas_frame_generate();
+				stream_state_set(STATE_PAUSED);
+				break;
+#endif
 			default:
 				LOG_INF("Unknown command received: 0x%02X\n", command);
 				break;
@@ -352,6 +363,14 @@ int main(void)
 
 	ret = nrf5340_audio_dk_init();
 	ERR_CHK(ret);
+
+#ifdef CONFIG_LATENCY_MEASUREMENT
+	LOG_INF("latency_measure_init");
+	ret = latency_measure_init();
+	ERR_CHK(ret);
+#else
+	LOG_INF("Latency measurement disabled in configuration");
+#endif
 
 	ret = fw_info_app_print();
 	ERR_CHK(ret);

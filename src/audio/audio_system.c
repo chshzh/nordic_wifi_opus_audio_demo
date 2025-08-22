@@ -14,6 +14,9 @@
 #include "streamctrl.h"
 #include "sw_codec_select.h"
 #include "wifi_audio_rx.h"
+#ifdef CONFIG_LATENCY_MEASUREMENT
+#include "latency_measure.h"
+#endif
 #include <contin_array.h>
 #include <data_fifo.h>
 #include <pcm_stream_channel_modifier.h>
@@ -133,7 +136,8 @@ static void encoder_thread(void *arg1, void *arg2, void *arg3)
 	while (1) {
 		/* Don't start encoding until the stream needing it has started */
 		ret = k_poll(&encoder_evt, 1, K_FOREVER);
-		/* Get PCM data from I2S */
+
+		/* Get PCM data from I2S/USB */
 		/* Since one audio frame is divided into a number of
 		 * blocks, we need to fetch the pointers to all of these
 		 * blocks before copying it to a continuous area of memory
@@ -149,7 +153,12 @@ static void encoder_thread(void *arg1, void *arg2, void *arg3)
 
 			data_fifo_block_free(&fifo_rx, tmp_pcm_raw_data[i]);
 		}
+#ifdef CONFIG_LATENCY_MEASUREMENT
+		/* T2: Encoding start timing point */
+		latency_measure_t2_encode_start();
+#endif
 
+#ifdef CONFIG_SW_CODEC_OPUS
 		if (sw_codec_cfg.encoder.enabled) {
 			if (test_tone_size) {
 				/* Test tone takes over audio stream */
@@ -171,6 +180,12 @@ static void encoder_thread(void *arg1, void *arg2, void *arg3)
 
 			ERR_CHK_MSG(ret, "Encode failed");
 		}
+#endif /* CONFIG_SW_CODEC_OPUS */
+
+#ifdef CONFIG_LATENCY_MEASUREMENT
+		/* T3: Encoding complete timing point */
+		latency_measure_t3_encode_complete();
+#endif
 
 		/* Print block usage */
 		if (debug_trans_count == DEBUG_INTERVAL_NUM) {
@@ -420,15 +435,17 @@ void audio_system_start(void)
 	}
 
 #if (IS_ENABLED(CONFIG_AUDIO_GATEWAY) && (CONFIG_AUDIO_SOURCE_USB))
+#ifndef CONFIG_LATENCY_MEASUREMENT
 	ret = audio_usb_start(&fifo_tx, &fifo_rx);
 	ERR_CHK(ret);
+#endif
 #else
 	ret = hw_codec_default_conf_enable();
 	ERR_CHK(ret);
 
 	ret = audio_datapath_start(&fifo_rx);
 	ERR_CHK(ret);
-#endif /* ((CONFIG_AUDIO_SOURCE_USB) && IS_ENABLED(CONFIG_AUDIO_GATEWAY))) */
+#endif /* CONFIG_LATENCY_MEASUREMENT */
 }
 
 void audio_system_stop(void)
@@ -442,7 +459,10 @@ void audio_system_stop(void)
 
 	LOG_DBG("Stopping codec");
 
-#if (IS_ENABLED(CONFIG_AUDIO_GATEWAY) && (CONFIG_AUDIO_SOURCE_USB))
+#ifdef CONFIG_LATENCY_MEASUREMENT
+	/* No hardware audio input to stop when latency measurement is enabled */
+	LOG_DBG("Latency measurement enabled - no hardware audio input to stop");
+#elif (IS_ENABLED(CONFIG_AUDIO_GATEWAY) && (CONFIG_AUDIO_SOURCE_USB))
 	audio_usb_stop();
 #else
 	ret = hw_codec_soft_reset();
@@ -450,7 +470,7 @@ void audio_system_stop(void)
 
 	ret = audio_datapath_stop();
 	ERR_CHK(ret);
-#endif /* ((CONFIG_AUDIO_GATEWAY) && CONFIG_AUDIO_SOURCE_USB) */
+#endif /* CONFIG_LATENCY_MEASUREMENT */
 
 	ret = sw_codec_uninit(sw_codec_cfg);
 	ERR_CHK_MSG(ret, "Failed to uninit codec");
@@ -491,6 +511,7 @@ int audio_system_init(void)
 	int ret;
 
 #if IS_ENABLED(CONFIG_AUDIO_GATEWAY)
+#ifndef CONFIG_LATENCY_MEASUREMENT
 #if (CONFIG_AUDIO_SOURCE_USB)
 	ret = audio_usb_init();
 	if (ret) {
@@ -510,6 +531,7 @@ int audio_system_init(void)
 		return ret;
 	}
 #endif // CONFIG_AUDIO_SOURCE_USB
+#endif /* CONFIG_LATENCY_MEASUREMENT */
 
 #elif IS_ENABLED(CONFIG_AUDIO_HEADSET)
 	ret = audio_datapath_init();
@@ -553,6 +575,103 @@ static int cmd_audio_system_stop(const struct shell *shell, size_t argc, const c
 
 	return 0;
 }
+
+#if defined(CONFIG_LATENCY_MEASUREMENT) && defined(CONFIG_AUDIO_GATEWAY)
+/**
+ * @brief Audio source simulator to replace USB/I2S input
+ *
+ * This function simulates an audio source by filling the RX FIFO buffer
+ * with test audio data at configured intervals. This replaces the need
+ * for actual USB or I2S hardware audio input during testing.
+ */
+int audio_system_latency_meas_frame_generate(void)
+{
+	int ret;
+	const int test_frame_count = CONFIG_LATENCY_MEASUREMENT_FRAME_COUNT;
+	const int interval_ms = CONFIG_LATENCY_MEASUREMENT_FRAME_INTERVAL;
+
+	LOG_INF("Starting audio source simulator (%d frames, %dms intervals)", test_frame_count,
+		interval_ms);
+
+	/* Generate test tone for consistent audio content */
+	ret = audio_system_encode_test_tone_set(1000); /* 1kHz test tone */
+	if (ret) {
+		LOG_ERR("Failed to set test tone: %d", ret);
+		return ret;
+	}
+
+	audio_system_encoder_start();
+
+	/* Generate frames and fill RX FIFO buffer at regular intervals */
+	for (int i = 0; i < test_frame_count; i++) {
+		LOG_INF("Generating audio frame %d/%d", i + 1, test_frame_count);
+
+		/* Generate fake PCM data (silence or test tone) */
+		static uint8_t fake_pcm_data[FRAME_SIZE_BYTES];
+		memset(fake_pcm_data, 0, FRAME_SIZE_BYTES);
+
+		/* Fill with test tone if available */
+		if (test_tone_size > 0) {
+			uint32_t pos = 0;
+
+			for (int sample = 0; sample < FRAME_SIZE_BYTES / 2;
+			     sample += test_tone_size / 2) {
+				size_t copy_size =
+					MIN(test_tone_size, FRAME_SIZE_BYTES - sample * 2);
+				memcpy(fake_pcm_data + sample * 2, test_tone_buf + pos, copy_size);
+				pos = (pos + copy_size / 2) % (test_tone_size / 2);
+			}
+		}
+
+		/* Fill RX FIFO buffer with simulated audio data */
+		/* This simulates what USB or I2S hardware would normally do */
+		void *tmp_pcm_blocks[CONFIG_FIFO_FRAME_SPLIT_NUM];
+
+		/* Get vacant blocks from RX FIFO */
+		for (int j = 0; j < CONFIG_FIFO_FRAME_SPLIT_NUM; j++) {
+			ret = data_fifo_pointer_first_vacant_get(&fifo_rx, &tmp_pcm_blocks[j],
+								 K_MSEC(100));
+			if (ret) {
+				LOG_ERR("Failed to get vacant RX FIFO block %d: %d", j, ret);
+				goto cleanup;
+			}
+		}
+
+		/* Copy simulated PCM data into FIFO blocks */
+		for (int j = 0; j < CONFIG_FIFO_FRAME_SPLIT_NUM; j++) {
+			memcpy(tmp_pcm_blocks[j], fake_pcm_data + (j * BLOCK_SIZE_BYTES),
+			       BLOCK_SIZE_BYTES);
+
+			ret = data_fifo_block_lock(&fifo_rx, &tmp_pcm_blocks[j], BLOCK_SIZE_BYTES);
+			if (ret) {
+				LOG_ERR("Failed to lock RX FIFO block %d: %d", j, ret);
+				goto cleanup;
+			}
+#ifdef CONFIG_LATENCY_MEASUREMENT
+			/* T1: Audio input capture timing point */
+			latency_measure_t1_audio_capture();
+#endif
+		}
+
+		LOG_DBG("Audio frame %d filled into RX FIFO, triggering encoder", i + 1);
+
+		/* Wait for next frame interval */
+		if (i < test_frame_count - 1) {
+			k_msleep(interval_ms);
+		}
+	}
+
+cleanup:
+	/* Turn off test tone */
+	ret = audio_system_encode_test_tone_set(0);
+	if (ret) {
+		LOG_WRN("Failed to turn off test tone: %d", ret);
+	}
+
+	LOG_INF("Audio source simulator completed");
+	return 0;
+}
+#endif /* CONFIG_LATENCY_MEASUREMENT && CONFIG_AUDIO_GATEWAY */
 
 SHELL_STATIC_SUBCMD_SET_CREATE(audio_system_cmd,
 			       SHELL_COND_CMD(CONFIG_SHELL, start, NULL, "Start the audio system",
