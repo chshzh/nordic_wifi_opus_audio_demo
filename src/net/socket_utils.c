@@ -369,12 +369,26 @@ void socket_utils_thread(void)
 
 		return;
 	}
+
+	/* Set socket options before binding */
+	int opt = 1;
+	ret = setsockopt(udp_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+	if (ret < 0) {
+		LOG_WRN("Failed to set SO_REUSEADDR: %d", -errno);
+	}
+
 	ret = bind(udp_socket, (struct sockaddr *)&self_addr, sizeof(self_addr));
 	if (ret < 0) {
 		LOG_ERR("bind, error: %d", -errno);
 
 		return;
 	}
+
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+	LOG_INF("UDP socket bound to port %d, waiting for data...", socket_port);
+#elif defined(CONFIG_SOCKET_ROLE_SERVER)
+	LOG_INF("UDP socket bound to port %d, waiting for commands...", socket_port);
+#endif
 
 	while ((socket_receive.len = recvfrom(udp_socket, socket_receive.buf, BUFFER_MAX_SIZE, 0,
 					      (struct sockaddr *)&target_addr, &target_addr_len)) >
