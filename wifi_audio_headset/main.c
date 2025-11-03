@@ -27,7 +27,6 @@
 #include "wifi_audio_rx.h"
 #include "hw_codec.h"
 #include <zephyr/logging/log.h>
-#include <zephyr/zbus/zbus.h>
 
 #ifdef CONFIG_HEAPS_MONITOR
 #include "heaps_monitor.h"
@@ -63,6 +62,30 @@ K_THREAD_STACK_DEFINE(le_audio_msg_sub_thread_stack, CONFIG_LE_AUDIO_MSG_SUB_STA
 
 static enum stream_state strm_state = STATE_PAUSED;
 static enum stream_state prev_stream_state = STATE_PAUSED;
+static void stream_state_set(enum stream_state stream_state_new);
+
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+static void socket_target_ready_handler(void)
+{
+	int ret;
+
+	if (strm_state == STATE_STREAMING) {
+		stream_state_set(STATE_PAUSED);
+		ret = led_on(LED_APP_1_BLUE);
+		if (ret) {
+			LOG_WRN("Failed to set LED on, ret: %d", ret);
+		}
+	}
+
+	LOG_INF("Socket target ready, auto-starting audio stream");
+	stream_state_set(STATE_STREAMING);
+	send_audio_command(AUDIO_START_CMD);
+	ret = led_blink(LED_APP_1_BLUE);
+	if (ret) {
+		LOG_WRN("Failed to set LED blink, ret: %d", ret);
+	}
+}
+#endif
 
 /* Function for handling all stream state changes */
 static void stream_state_set(enum stream_state stream_state_new)
@@ -382,6 +405,9 @@ int main(void)
 	led_on(LED_NET_RGB, LED_COLOR_RED);
 	ret = socket_utils_init();
 	ERR_CHK(ret);
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+	socket_utils_set_target_ready_callback(socket_target_ready_handler);
+#endif
 
 	LOG_INF("audio_system_init");
 	ret = audio_system_init();

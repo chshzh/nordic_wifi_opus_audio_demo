@@ -32,21 +32,11 @@ config SOCKET_UTILS
 
 if SOCKET_UTILS
 
-choice SOCKET_TYPE
-	prompt "Socket type"
-	default SOCKET_TYPE_UDP
-
 config SOCKET_TYPE_UDP
 	bool "UDP socket"
+	default y
 	help
 	  Use UDP sockets for communication.
-
-config SOCKET_TYPE_TCP
-	bool "TCP socket"
-	help
-	  Use TCP sockets for communication.
-
-endchoice # SOCKET_TYPE
 
 choice SOCKET_ROLE
 	prompt "Socket role"

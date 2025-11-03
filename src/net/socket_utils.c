@@ -13,9 +13,8 @@ LOG_MODULE_REGISTER(socket_utils, CONFIG_SOCKET_UTILS_LOG_LEVEL);
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
 #include <zephyr/net/socket.h>
+#include <zephyr/net/net_ip.h>
 #include <zephyr/net/conn_mgr_connectivity.h>
-#include <zephyr/sys/reboot.h>
-#include <zephyr/logging/log_ctrl.h>
 #include <zephyr/shell/shell.h>
 #include "socket_utils.h"
 #include "net_event_mgmt.h"
@@ -29,20 +28,14 @@ LOG_MODULE_REGISTER(socket_utils, CONFIG_SOCKET_UTILS_LOG_LEVEL);
 #define PRIORITY  3
 
 // #define pc_port  60000
-#define socket_port 60010 // use for either udp or tcp server
+#define socket_port 60010 // UDP audio transport port
 
 /**********External Resources START**************/
 #if IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_AP)
 extern struct k_sem station_connected_sem;
 #endif
 /**********External Resources END**************/
-#if defined(CONFIG_SOCKET_TYPE_TCP)
-int tcp_server_listen_fd;
-int tcp_server_socket;
-int tcp_client_socket;
-#elif defined(CONFIG_SOCKET_TYPE_UDP)
-int udp_socket;
-#endif
+static int udp_socket;
 struct sockaddr_in self_addr;
 char target_addr_str[32];
 struct sockaddr_in target_addr;
@@ -56,6 +49,27 @@ static net_util_socket_rx_callback_t socket_rx_cb;
 
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
 volatile bool serveraddr_set_signall = false;
+
+static socket_utils_target_ready_cb_t target_ready_cb;
+static bool socket_ready;
+static bool target_ready_notified;
+
+static void socket_utils_notify_target_ready(void)
+{
+	if (!serveraddr_set_signall || !socket_ready || target_ready_notified ||
+	    target_ready_cb == NULL) {
+		return;
+	}
+
+	target_ready_notified = true;
+	target_ready_cb();
+}
+
+void socket_utils_set_target_ready_callback(socket_utils_target_ready_cb_t cb)
+{
+	target_ready_cb = cb;
+	socket_utils_notify_target_ready();
+}
 #endif /*#if defined(CONFIG_SOCKET_ROLE_CLIENT)*/
 
 volatile bool socket_connected_signall = false;
@@ -83,6 +97,43 @@ static void socket_utils_trigger_rx_callback_if_set(void)
 	}
 }
 
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+bool socket_utils_is_target_set(void)
+{
+	return serveraddr_set_signall;
+}
+
+void socket_utils_set_target_ipv4(const struct in_addr *addr)
+{
+	if ((addr == NULL) || (addr->s_addr == 0U)) {
+		return;
+	}
+
+	if (serveraddr_set_signall && (target_addr.sin_addr.s_addr == addr->s_addr)) {
+		return;
+	}
+
+	target_addr.sin_family = AF_INET;
+	target_addr.sin_port = htons(socket_port);
+	target_addr.sin_addr = *addr;
+
+	inet_ntop(target_addr.sin_family, &target_addr.sin_addr, target_addr_str,
+		  sizeof(target_addr_str));
+	LOG_INF("Target address set to %s:%d", target_addr_str, socket_port);
+	serveraddr_set_signall = true;
+	target_ready_notified = false;
+	socket_utils_notify_target_ready();
+}
+
+void socket_utils_clear_target(void)
+{
+	serveraddr_set_signall = false;
+	target_ready_notified = false;
+	socket_ready = false;
+	LOG_INF("Cleared socket target state");
+}
+#endif /* CONFIG_SOCKET_ROLE_CLIENT */
+
 int socket_utils_tx_data(uint8_t *data, size_t length)
 {
 
@@ -92,30 +143,11 @@ int socket_utils_tx_data(uint8_t *data, size_t length)
 	while (length > 0) {
 		size_t to_send = (length >= chunk_size) ? chunk_size : length;
 
-#if defined(CONFIG_SOCKET_TYPE_TCP)
-#if defined(CONFIG_SOCKET_ROLE_CLIENT)
-		bytes_sent = send(tcp_client_socket, data, to_send, 0);
-		LOG_INF("Sent %d bytes to server\n", bytes_sent);
-		// LOG_HEXDUMP_INF(data, bytes_sent, "Sent data(HEX):");
-#elif defined(CONFIG_SOCKET_ROLE_SERVER)
-		bytes_sent = send(tcp_server_socket, data, to_send, 0);
-		LOG_INF("Sent %d bytes to server\n", bytes_sent);
-		// LOG_HEXDUMP_INF(data, bytes_sent, "Sent data(HEX):");
-#endif // #if defined(CONFIG_SOCKET_ROLE_CLIENT)
-#elif defined(CONFIG_SOCKET_TYPE_UDP)
 		bytes_sent = sendto(udp_socket, data, to_send, 0, (struct sockaddr *)&target_addr,
 				    sizeof(target_addr));
-#endif
 
 		if (bytes_sent == -1) {
 			perror("Sending failed");
-
-			//     #if defined(CONFIG_SOCKET_TYPE_TCP)
-			//         // close(tcp_server_socket);
-			//     #else
-			//         close(udp_socket);
-			//     #endif
-
 			return bytes_sent;
 		}
 
@@ -130,7 +162,10 @@ int do_mdns_query(void)
 {
 	struct addrinfo *result;
 	struct addrinfo *addr;
-	struct addrinfo hints = {.ai_socktype = SOCK_STREAM, .ai_family = AF_INET};
+	struct addrinfo hints = {
+		.ai_socktype = SOCK_DGRAM,
+		.ai_family = AF_INET,
+	};
 
 	char addr_str[NET_IPV6_ADDR_LEN];
 	int err;
@@ -155,17 +190,12 @@ int do_mdns_query(void)
 			inet_ntop(AF_INET, &addr4->sin_addr, addr_str, sizeof(addr_str));
 			// LOG_INF("IPv4 address: %s", addr_str);
 
-			target_addr.sin_family = AF_INET;
-			target_addr.sin_port =
-				htons(socket_port); // Convert port to network byte order
-			target_addr.sin_addr = addr4->sin_addr;
-
-			if (target_addr.sin_addr.s_addr == 0) {
+			if (addr4->sin_addr.s_addr == 0) {
 				LOG_ERR("Invalid IP address");
 				continue;
 			}
-			LOG_INF("Target address set to: %s:%d", addr_str, socket_port);
-			serveraddr_set_signall = true;
+
+			socket_utils_set_target_ipv4(&addr4->sin_addr);
 
 		} else if (addr->ai_family == AF_INET6) {
 			struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)addr->ai_addr;
@@ -197,19 +227,15 @@ void socket_utils_thread(void)
 	ret = wifi_run_softap_mode();
 	if (ret) {
 		LOG_ERR("Failed to setup SoftAP mode: %d", ret);
-
 		return;
 	}
 
-	/* Wait for SoftAP to be enabled and network ready */
 	ret = k_sem_take(&ipv4_dhcp_bond_sem, K_FOREVER);
 	if (ret != 0) {
 		LOG_ERR("Failed to wait for SoftAP network setup: %d", ret);
-
 		return;
 	}
 
-	/* Print detailed WiFi status when connected */
 	wifi_print_status();
 
 	LOG_INF("SoftAP setup complete, waiting for station to connect...");
@@ -217,11 +243,9 @@ void socket_utils_thread(void)
 	LOG_INF("Password: %s", CONFIG_SOFTAP_PASSWORD);
 	LOG_INF("Socket server will start once a station connects");
 
-	/* Wait for a station to connect before starting socket server */
 	ret = k_sem_take(&station_connected_sem, K_FOREVER);
 	if (ret) {
 		LOG_ERR("Error waiting for station connection: %d", ret);
-
 		return;
 	}
 
@@ -238,6 +262,17 @@ void socket_utils_thread(void)
 	LOG_INF("No Proper Wi-Fi credentials configured, try to configure with "
 		"CONFIG_WIFI_CREDENTIALS_STATIC or CONFIG_WIFI_CREDENTIALS_SHELL");
 #endif /* IS_ENABLED(CONFIG_WIFI_CREDENTIALS_STATIC) */
+#if IS_ENABLED(CONFIG_SOCKET_ROLE_CLIENT)
+	int cred_ret = wifi_utils_ensure_gateway_softap_credentials();
+	if (cred_ret && cred_ret != -ENOTSUP) {
+		LOG_WRN("Provisioning default GatewayAP credentials failed: %d", cred_ret);
+	}
+
+	int auto_ret = wifi_utils_auto_connect_stored();
+	if (auto_ret && auto_ret != -EALREADY && auto_ret != -ENOTSUP) {
+		LOG_WRN("Auto-connect to stored credentials failed: %d", auto_ret);
+	}
+#endif
 	ret = conn_mgr_all_if_connect(true);
 	if (ret) {
 		LOG_ERR("Failed to initiate network connection: %d", ret);
@@ -246,13 +281,13 @@ void socket_utils_thread(void)
 	ret = k_sem_take(&ipv4_dhcp_bond_sem, K_FOREVER);
 	if (ret != 0) {
 		LOG_ERR("Failed to wait for network connectivity: %d", ret);
-
 		return;
 	}
 
 	LOG_INF("Network connectivity established, setting up sockets...");
 
 #endif /* IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_AP) */
+
 	self_addr.sin_family = AF_INET;
 	self_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	self_addr.sin_port = htons(socket_port);
@@ -260,144 +295,104 @@ void socket_utils_thread(void)
 	target_addr.sin_family = AF_INET;
 
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
-
+	if (!socket_utils_is_target_set()) {
 #ifdef CONFIG_MDNS_RESOLVER
-	ret = do_mdns_query();
+		ret = do_mdns_query();
 #else
-	ret = -1;
+		ret = -ENOTSUP;
 #endif /* CONFIG_MDNS_RESOLVER */
 
-	if (ret < 0) {
-		LOG_INF("\r\n\r\nTarget address could not be resolved, please set it manually with "
-			"shell command\r\n for example:\t socket set_target_addr "
-			"192.168.50.126:60010\r\n");
+		if (ret < 0) {
+			LOG_INF("mDNS lookup unavailable (err %d); waiting for DHCP-based target "
+				"configuration",
+				ret);
+		}
+	} else {
+		LOG_DBG("Target address already provisioned; skipping mDNS lookup");
 	}
 
 	while (!serveraddr_set_signall) {
 		k_sleep(K_MSEC(100));
 	}
-	LOG_INF("\r\n\r\nTarget address is set. Press play button to start audio transmission\r\n");
+	LOG_INF("Target address is set. Initializing socket transport");
 #elif defined(CONFIG_SOCKET_ROLE_SERVER)
 	LOG_INF("\r\n\r\nDevice works as socket server, wait for socket client connection...\r\n");
 #endif // #if defined(CONFIG_SOCKET_ROLE_CLIENT)
 
-#if defined(CONFIG_SOCKET_TYPE_TCP)
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
-	tcp_client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	int opt = 1;
+	socket_ready = false;
+#endif
 
-	setsockopt(tcp_client_socket, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt));
-	ret = connect(tcp_client_socket, (struct sockaddr *)&target_addr, sizeof(target_addr));
-	if (ret < 0) {
-		LOG_ERR("connect, error: %d", -errno);
-
-		return;
-	}
-	LOG_INF("Connected to TCP server\n");
-	// Handle the client connection
-	while (1) {
-		socket_receive.len =
-			recv(tcp_client_socket, socket_receive.buf, BUFFER_MAX_SIZE, 0);
-		if (socket_receive.len > 0) {
-			socket_utils_trigger_rx_callback_if_set();
-		} else if (socket_receive.len == -1) {
-			LOG_ERR("Receiving failed");
-			close(tcp_client_socket);
-		} else if (socket_receive.len == 0) {
-			LOG_INF("TCP Server disconnected.\n");
-			// close(tcp_client_socket);
+	for (;;) {
+		udp_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		if (udp_socket < 0) {
+			LOG_ERR("Failed to create socket: %d", -errno);
+			k_sleep(K_SECONDS(1));
+			continue;
 		}
-	}
-#elif defined(CONFIG_SOCKET_ROLE_SERVER)
-	tcp_server_listen_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	if (tcp_server_listen_fd < 0) {
-		LOG_ERR("Failed to create socket: %d", -errno);
-
-		return;
-	}
-
-	ret = bind(tcp_server_listen_fd, (struct sockaddr *)&self_addr, sizeof(self_addr));
-	if (ret < 0) {
-		LOG_ERR("bind, error: %d", -errno);
-
-		return;
-	}
-
-	ret = listen(tcp_server_listen_fd, 5);
-	if (ret < 0) {
-		LOG_ERR("listen, error: %d", -errno);
-
-		return;
-	}
-	tcp_server_socket =
-		accept(tcp_server_listen_fd, (struct sockaddr *)&target_addr, &target_addr_len);
-	if (tcp_server_socket < 0) {
-		LOG_ERR("accept, error: %d", -errno);
-
-		return;
-	}
-	LOG_INF("Accepted connection from client\n");
-	inet_ntop(target_addr.sin_family, &target_addr.sin_addr, target_addr_str,
-		  sizeof(target_addr_str));
-	LOG_INF("Connect socket client to IP Address %s:%d\n", target_addr_str,
-		ntohs(target_addr.sin_port));
-
-	while (1) {
-		// Handle the client connection
-		socket_receive.len =
-			recv(tcp_server_socket, socket_receive.buf, BUFFER_MAX_SIZE, 0);
-		if (socket_receive.len > 0) {
-			socket_utils_trigger_rx_callback_if_set();
-		} else if (socket_receive.len == -1) {
-			LOG_ERR("Receiving failed");
-			close(tcp_server_socket);
-		} else if (socket_receive.len == 0) {
-			LOG_INF("TCP Server disconnected.\n");
-			close(tcp_server_socket);
+		ret = bind(udp_socket, (struct sockaddr *)&self_addr, sizeof(self_addr));
+		if (ret < 0) {
+			LOG_ERR("bind, error: %d", -errno);
+			close(udp_socket);
+			k_sleep(K_SECONDS(1));
+			continue;
 		}
-	}
-	close(tcp_server_socket);
-	close(tcp_server_listen_fd);
 
-#endif // #if defined(CONFIG_SOCKET_ROLE_CLIENT)
-
-#elif defined(CONFIG_SOCKET_TYPE_UDP)
-	udp_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (udp_socket < 0) {
-		LOG_ERR("Failed to create socket: %d", -errno);
-
-		return;
-	}
-	ret = bind(udp_socket, (struct sockaddr *)&self_addr, sizeof(self_addr));
-	if (ret < 0) {
-		LOG_ERR("bind, error: %d", -errno);
-
-		return;
-	}
-
-	while ((socket_receive.len = recvfrom(udp_socket, socket_receive.buf, BUFFER_MAX_SIZE, 0,
-					      (struct sockaddr *)&target_addr, &target_addr_len)) >
-	       0) {
-		if (socket_connected_signall == false) {
-			inet_ntop(target_addr.sin_family, &target_addr.sin_addr, target_addr_str,
-				  sizeof(target_addr_str));
-			LOG_INF("Connect socket to IP Address %s:%d\n", target_addr_str,
-				ntohs(target_addr.sin_port));
-			socket_connected_signall = true;
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+		if (serveraddr_set_signall && !socket_ready) {
+			socket_ready = true;
+			socket_utils_notify_target_ready();
 		}
-		socket_utils_trigger_rx_callback_if_set();
-	}
-	if (socket_receive.len == -1) {
-		LOG_ERR("Receiving failed");
-	} else if (socket_receive.len == 0) {
-		LOG_INF("Client disconnected.\n");
-	}
+#endif
 
-	close(udp_socket);
-	socket_connected_signall = false;
+		while (true) {
+			target_addr_len = sizeof(target_addr);
+			socket_receive.len =
+				recvfrom(udp_socket, socket_receive.buf, BUFFER_MAX_SIZE, 0,
+					 (struct sockaddr *)&target_addr, &target_addr_len);
+			if (socket_receive.len <= 0) {
+				break;
+			}
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+			if (!serveraddr_set_signall) {
+				inet_ntop(target_addr.sin_family, &target_addr.sin_addr,
+					  target_addr_str, sizeof(target_addr_str));
+				LOG_INF("Discovered socket server at %s:%d", target_addr_str,
+					ntohs(target_addr.sin_port));
+				socket_utils_set_target_ipv4(&target_addr.sin_addr);
+			}
+
+			if (!socket_ready) {
+				socket_ready = true;
+				socket_utils_notify_target_ready();
+			}
 
 #endif
+			if (!socket_connected_signall) {
+				inet_ntop(target_addr.sin_family, &target_addr.sin_addr,
+					  target_addr_str, sizeof(target_addr_str));
+				LOG_INF("Connect socket to IP Address %s:%d\n", target_addr_str,
+					ntohs(target_addr.sin_port));
+				socket_connected_signall = true;
+			}
+			socket_utils_trigger_rx_callback_if_set();
+		}
+
+		if (socket_receive.len == -1) {
+			LOG_ERR("Receiving failed");
+		} else if (socket_receive.len == 0) {
+			LOG_INF("Client disconnected.\n");
+		}
+
+		close(udp_socket);
+		socket_connected_signall = false;
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+		socket_ready = false;
+		target_ready_notified = false;
+#endif
+		k_sleep(K_SECONDS(1));
+	}
 }
 
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
@@ -443,6 +438,8 @@ static int cmd_set_target_address(const struct shell *shell, size_t argc, const 
 
 	shell_print(shell, "Target address set to: %s:%d", ip_str, port);
 	serveraddr_set_signall = true;
+	target_ready_notified = false;
+	socket_utils_notify_target_ready();
 	k_free(target_addr_str);
 	return 0;
 }

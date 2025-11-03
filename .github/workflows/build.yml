@@ -46,6 +46,14 @@ jobs:
             build_dir: "build_opus_gateway_usb"
             overlay: "overlay-opus.conf;overlay-audio-gateway.conf"
             description: "Wi-Fi Opus Audio Gateway device with USB audio source"
+          - name: "Wi-Fi Opus Audio Gateway SoftAP USB"
+            build_dir: "build_opus_gateway_softap_usb"
+            overlay: "overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-softap.conf"
+            description: "Wi-Fi Opus Audio Gateway device hosting SoftAP with USB audio source"
+          - name: "Wi-Fi Opus Audio Gateway SoftAP LINE IN"
+            build_dir: "build_opus_gateway_softap_linein"
+            overlay: "overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-softap.conf;overlay-gateway-linein.conf"
+            description: "Wi-Fi Opus Audio Gateway device hosting SoftAP with LINE IN audio source"
           - name: "Wi-Fi Opus Audio Gateway LINE IN"
             build_dir: "build_opus_gateway_linein"
             overlay: "overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-linein.conf"
@@ -248,7 +256,9 @@ jobs:
           
           # Copy and rename hex files with configuration names
           for config_dir in artifacts/build-*; do
-            config_name=$(basename "$config_dir" | sed 's/build-//' | sed 's/ /-/g' | tr '[:upper:]' '[:lower:]')
+            config_name=$(basename "$config_dir" | sed 's/^build-//')
+            config_name=$(echo "$config_name" | tr '[:upper:]' '[:lower:]')
+            config_name=$(echo "$config_name" | sed 's/wi-fi/wifi/g; s/ /-/g; s/[^a-z0-9-]//g; s/--*/-/g; s/^-//; s/-$//')
             if [ -f "$config_dir/merged.hex" ]; then
               cp "$config_dir/merged.hex" "release-package/nordic-wifi-opus-audio-demo-${config_name}-${GITHUB_REF_NAME}.hex"
             fi
@@ -272,12 +282,15 @@ jobs:
             
             > **Note**: This release tag (${{ github.ref_name }}) corresponds to the NCS version (${{ needs.set-version.outputs.NCS_VERSION }}) used for building the firmware.
             
-            This release contains pre-compiled firmware for Wi-Fi Opus Audio Demo configurations:
+            This release contains pre-built firmware for all primary roles and SoftAP variants of the demo. Pick the hex that matches the role you are flashing:
             
-            ### Firmware Configurations Included:
-            - **Wi-Fi Opus Audio Gateway USB** - Audio gateway device with USB audio input and Opus codec support
-            - **Wi-Fi Opus Audio Gateway LINE IN** - Audio gateway device with LINE IN audio input and Opus codec support
-            - **Wi-Fi Opus Audio Headset** - Audio headset device with Opus codec support
+            | Role | File name | Notes |
+            | --- | --- | --- |
+            | Audio Gateway (USB source) | `nordic-wifi-opus-audio-demo-wifi-opus-audio-gateway-usb-${{ github.ref_name }}.hex` | Gateway with USB audio input, Wi-Fi STA mode |
+            | Audio Gateway (LINE IN source) | `nordic-wifi-opus-audio-demo-wifi-opus-audio-gateway-line-in-${{ github.ref_name }}.hex` | Gateway with line-in jack input, Wi-Fi STA mode |
+            | Audio Gateway SoftAP (USB source) | `nordic-wifi-opus-audio-demo-wifi-opus-audio-gateway-softap-usb-${{ github.ref_name }}.hex` | Gateway hosts Wi-Fi SoftAP, USB audio input |
+            | Audio Gateway SoftAP (LINE IN source) | `nordic-wifi-opus-audio-demo-wifi-opus-audio-gateway-softap-line-in-${{ github.ref_name }}.hex` | Gateway hosts Wi-Fi SoftAP, line-in input |
+            | Audio Headset | `nordic-wifi-opus-audio-demo-wifi-opus-audio-headset-${{ github.ref_name }}.hex` | Headset role, auto-connects to configured gateway |
             
             ### Files:
             - Individual `.hex` files for each configuration
@@ -293,7 +306,7 @@ jobs:
             1. Download the appropriate `.hex` file for your device role (Gateway or Headset)
             2. Flash to nRF5340 Audio DK using `west flash` or nRF Connect Programmer
             3. Connect nRF7002EK as shield to nRF5340 Audio DK
-            4. Refer to [README.md](README.md) for configuration and operation details
+            4. Refer to [README.md](README.md) for Wi-Fi provisioning steps (SoftAP and station modes) and detailed operation guide
             
             ### Quick Start:
             - Flash Gateway firmware to one nRF5340 Audio DK

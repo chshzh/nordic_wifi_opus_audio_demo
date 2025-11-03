@@ -2,23 +2,21 @@
 
 [![Build and Test Wi-Fi Opus Audio Demo](https://github.com/chshzh/nordic_wifi_opus_audio_demo/actions/workflows/build.yml/badge.svg)](https://github.com/chshzh/nordic_wifi_opus_audio_demo/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/License-LicenseRef--Nordic--5--Clause-blue.svg)](LICENSE)
-[![NCS Version](https://img.shields.io/badge/NCS-v3.0.2-green.svg)](https://www.nordicsemi.com/Products/Development-software/nRF-Connect-SDK)
+[![NCS Version](https://img.shields.io/badge/NCS-v3.1.1-green.svg)](https://www.nordicsemi.com/Products/Development-software/nRF-Connect-SDK)
 ![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF7002EK-blue)
 ![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF5340_Audio_DK-red)
 
 
 ## 🔍 Overview
 
-This project demonstrates how to use Wi-Fi with UDP/TCP sockets for real-time audio streaming. It is designed to showcase low-latency audio transfer, utilizing the nRF5340 Audio DK and nRF7002 EK platforms. This sample also integrates the Opus codec for efficient audio compression and decompression, offering flexibility for various network conditions.
-
-> **⚠️ TCP Support Notice**: TCP support is currently not maintained due to significantly higher latency compared to UDP. For optimal real-time audio performance, UDP is strongly recommended.
+This project demonstrates how to use Wi-Fi with UDP sockets for real-time audio streaming. It is designed to showcase low-latency audio transfer, utilizing the nRF5340 Audio DK and nRF7002 EK platforms. This sample also integrates the Opus codec for efficient audio compression and decompression, offering flexibility for various network conditions.
 
 ## 🎯 Key Features
 
 - **Real-time Audio Streaming**: Low-latency audio transfer over Wi-Fi networks
 - **Opus Codec Integration**: Efficient audio compression with configurable bitrates (6kbps to 320kbps)
-- **Flexible Network Protocols**: Support for both UDP and TCP sockets
-- **Multiple Wi-Fi Modes**: Station mode with credential shell and static configuration
+- **Low-Latency Transport**: Optimized UDP socket pipeline for audio streaming
+- **Multiple Wi-Fi Modes**: Station mode with credential shell/static configuration and SoftAP mode for gateway-led pairing
 - **Dual Device Setup**: Audio Gateway and Headset device roles
 - **Battery Power Support**: Optional battery operation for headset device
 - **mDNS Discovery**: Automatic device discovery within the same network (Need mDNS support in local network)
@@ -45,7 +43,7 @@ The following picture shows a setup where the Audio Gateway (top) device uses LI
 
 ### Software Requirements
 **SW:** 
-- **NCS v3.0.2** - Nordic Connect SDK
+- **NCS v3.1.1** - Nordic Connect SDK
 - **Opus v1.5.2** - Audio codec library
 
 ## 🚀 Quick Start Guide
@@ -67,6 +65,12 @@ west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway -- -DSHIE
 west flash --erase -d build_opus_gateway
 ```
 
+**Gateway Device (SoftAP auto-pairing with LINE IN input):**
+```bash
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway_softap_linein -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-softap.conf;overlay-gateway-linein.conf"
+west flash --erase -d build_opus_gateway_softap_linein
+```
+
 **Headset Device:**
 ```bash
 west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_headset -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-headset.conf"
@@ -80,6 +84,8 @@ Use the Wi-Fi credentials shell on the gateway device:
 uart:~$ wifi cred add -s wifi_ssid -p wifi_password -k 1
 uart:~$ wifi cred auto_connect
 ```
+
+> **Tip:** When the gateway firmware includes `overlay-gateway-softap.conf`, it hosts the `GatewayAP` network and the headset auto-discovers the fixed target at `192.168.1.1`—no Wi-Fi shell configuration required.
 
 ### 4. Start Audio Streaming
 
@@ -110,7 +116,7 @@ The sample supports multiple build configurations through overlay files:
 - **`overlay-opus.conf`** - Enable Opus codec support, otherwise raw PCM data.
 - **`overlay-audio-gateway.conf`** - Configure device as audio gateway
 - **`overlay-audio-headset.conf`** - Configure device as audio headset
-- **`overlay-tcp.conf`** - Use TCP instead of UDP for audio streaming
+- **`overlay-gateway-softap.conf`** - Enable gateway SoftAP mode with static 192.168.1.1 service
 - **`overlay-wifi-sta-static.conf`** - Use static Wi-Fi credentials
 - **`overlay-gateway-linein.conf`** - Enable gateway device to use LINE IN as audio input instead of USB
 
@@ -127,10 +133,22 @@ west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway -- -DSHIE
 west flash --erase -d build_opus_gateway
 ```
 
+**Gateway SoftAP USB Audio Source (auto-connects headset, fixed 192.168.1.1):**
+```bash
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway_softap -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-softap.conf"
+west flash --erase -d build_opus_gateway_softap
+```
+
 **Gateway LINE IN Audio Source:**
 ```bash
 west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-linein.conf"
 west flash --erase -d build_opus_gateway
+```
+
+**Gateway SoftAP LINE IN Audio Source (auto-connects headset):**
+```bash
+west build -p -b nrf5340_audio_dk/nrf5340/cpuapp -d build_opus_gateway_softap_linein -- -DSHIELD="nrf7002ek" -DEXTRA_CONF_FILE="overlay-opus.conf;overlay-audio-gateway.conf;overlay-gateway-softap.conf;overlay-gateway-linein.conf"
+west flash --erase -d build_opus_gateway_softap_linein
 ```
 
 **Headset:**

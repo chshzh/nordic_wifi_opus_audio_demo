@@ -10,10 +10,14 @@
 #include <supp_events.h>
 #include <zephyr/net/socket.h>
 #include <stdio.h>
+#include <zephyr/sys/reboot.h>
 
 #include "net_event_mgmt.h"
 #include "wifi_utils.h"
 #include "led.h"
+#if IS_ENABLED(CONFIG_SOCKET_ROLE_CLIENT)
+#include "socket_utils.h"
+#endif
 
 LOG_MODULE_REGISTER(net_event_mgmt, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -289,6 +293,11 @@ static void l2_wifi_conn_event_handler(struct net_mgmt_event_callback *cb, uint3
 	case NET_EVENT_WIFI_DISCONNECT_RESULT: {
 		const struct wifi_status *status = (const struct wifi_status *)cb->info;
 		LOG_INF("WiFi disconnected: status=%d", status ? status->status : -1);
+#if IS_ENABLED(CONFIG_SOCKET_ROLE_CLIENT)
+		socket_utils_clear_target();
+#endif
+		LOG_INF("Rebooting headset due to WiFi disconnect");
+		sys_reboot(SYS_REBOOT_WARM);
 	} break;
 
 	default:

@@ -13,11 +13,93 @@
 #include <zephyr/net/dhcpv4.h>
 #include <zephyr/net/dhcpv4_server.h>
 #include <zephyr/net/socket.h>
+#include <zephyr/net/wifi_credentials.h>
+#include <zephyr/sys/util.h>
+#include <errno.h>
 #include <string.h>
 
 #include "wifi_utils.h"
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+#include "socket_utils.h"
+#endif
 
 LOG_MODULE_REGISTER(wifi_utils, CONFIG_LOG_DEFAULT_LEVEL);
+
+#define GATEWAY_SOFTAP_SSID     "GatewayAP"
+#define GATEWAY_SOFTAP_PASSWORD "wifi1234"
+
+static char last_connected_ssid[WIFI_SSID_MAX_LEN + 1];
+
+const char *wifi_utils_get_last_ssid(void)
+{
+	if (last_connected_ssid[0] == '\0') {
+		return NULL;
+	}
+
+	return last_connected_ssid;
+}
+
+int wifi_utils_ensure_gateway_softap_credentials(void)
+{
+#if !defined(CONFIG_WIFI_CREDENTIALS)
+	return -ENOTSUP;
+#else
+	struct wifi_credentials_personal creds = {0};
+	size_t ssid_len = strlen(GATEWAY_SOFTAP_SSID);
+	int ret =
+		wifi_credentials_get_by_ssid_personal_struct(GATEWAY_SOFTAP_SSID, ssid_len, &creds);
+
+	if (ret == 0) {
+		return 0;
+	}
+
+	if (ret != -ENOENT) {
+		LOG_ERR("Failed to read stored credentials for %s: %d", GATEWAY_SOFTAP_SSID, ret);
+		return ret;
+	}
+
+	creds.header.type = WIFI_SECURITY_TYPE_PSK;
+	memcpy(creds.header.ssid, GATEWAY_SOFTAP_SSID, ssid_len);
+	creds.header.ssid_len = ssid_len;
+	creds.header.flags = WIFI_CREDENTIALS_FLAG_FAVORITE | WIFI_CREDENTIALS_FLAG_2_4GHz;
+	creds.password_len = strlen(GATEWAY_SOFTAP_PASSWORD);
+	memcpy(creds.password, GATEWAY_SOFTAP_PASSWORD, creds.password_len);
+	creds.password[creds.password_len] = '\0';
+
+	ret = wifi_credentials_set_personal_struct(&creds);
+	if (ret == 0) {
+		LOG_INF("Stored default Wi-Fi credentials for %s", GATEWAY_SOFTAP_SSID);
+	} else {
+		LOG_ERR("Failed to store default credentials for %s: %d", GATEWAY_SOFTAP_SSID, ret);
+	}
+
+	return ret;
+#endif
+}
+
+int wifi_utils_auto_connect_stored(void)
+{
+
+#if !defined(CONFIG_WIFI_CREDENTIALS_CONNECT_STORED)
+	return -ENOTSUP;
+#else
+	struct net_if *iface = net_if_get_first_wifi();
+	int ret;
+
+	if (iface == NULL) {
+		return -ENODEV;
+	}
+
+	ret = net_mgmt(NET_REQUEST_WIFI_CONNECT_STORED, iface, NULL, 0);
+	if (ret == 0) {
+		LOG_INF("Auto-connect request issued for stored Wi-Fi credentials");
+	} else if (ret != -EALREADY) {
+		LOG_WRN("Auto-connect request failed: %d", ret);
+	}
+
+	return ret;
+#endif
+}
 
 int wifi_set_mode(int mode)
 {
@@ -265,6 +347,8 @@ int wifi_print_status(void)
 	LOG_INF("State: %s", wifi_state_txt(status.state));
 
 	if (status.state >= WIFI_STATE_ASSOCIATED) {
+		strncpy(last_connected_ssid, status.ssid, WIFI_SSID_MAX_LEN);
+		last_connected_ssid[WIFI_SSID_MAX_LEN] = '\0';
 		LOG_INF("Interface Mode: %s", wifi_mode_txt(status.iface_mode));
 		LOG_INF("SSID: %.32s", status.ssid);
 		LOG_INF("BSSID: %02x:%02x:%02x:%02x:%02x:%02x", status.bssid[0], status.bssid[1],
@@ -273,18 +357,41 @@ int wifi_print_status(void)
 		LOG_INF("Channel: %d", status.channel);
 		LOG_INF("Security: %s", wifi_security_txt(status.security));
 		LOG_INF("RSSI: %d dBm", status.rssi);
+	} else {
+		last_connected_ssid[0] = '\0';
 	}
 
 	return 0;
 }
 
+#if defined(CONFIG_NET_DHCPV4)
 void wifi_print_dhcp_ip(struct net_mgmt_event_callback *cb)
 {
-	/* Get DHCP info from struct net_if_dhcpv4 and print */
 	const struct net_if_dhcpv4 *dhcpv4 = cb->info;
 	const struct in_addr *addr = &dhcpv4->requested_ip;
 	char dhcp_info[128];
 
 	net_addr_ntop(AF_INET, addr, dhcp_info, sizeof(dhcp_info));
 	LOG_INF("\r\n\r\nDevice IP address: %s\r\n", dhcp_info);
+#if defined(CONFIG_SOCKET_ROLE_CLIENT)
+	const char *connected_ssid = wifi_utils_get_last_ssid();
+
+	if ((connected_ssid != NULL) &&
+	    (strncmp(connected_ssid, GATEWAY_SOFTAP_SSID, WIFI_SSID_MAX_LEN) == 0) &&
+	    !socket_utils_is_target_set()) {
+		struct in_addr gateway_addr;
+
+		if (inet_pton(AF_INET, "192.168.1.1", &gateway_addr) == 1) {
+			socket_utils_set_target_ipv4(&gateway_addr);
+		} else {
+			LOG_WRN("Failed to parse static gateway address");
+		}
+	}
+#endif
 }
+#else
+void wifi_print_dhcp_ip(struct net_mgmt_event_callback *cb)
+{
+	ARG_UNUSED(cb);
+}
+#endif
