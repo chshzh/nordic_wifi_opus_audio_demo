@@ -14,6 +14,7 @@
 #include <zephyr/net/dhcpv4_server.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/net/wifi_credentials.h>
+#include <zephyr/net/wifi_utils.h>
 #include <zephyr/sys/util.h>
 #include <errno.h>
 #include <string.h>
@@ -235,8 +236,17 @@ static int wifi_set_softap(const char *ssid, const char *psk)
 	}
 	params.psk = (uint8_t *)psk;
 	params.psk_length = strlen(params.psk);
+#if defined(CONFIG_SOFTAP_BAND_5_GHZ)
+	params.band = WIFI_FREQ_BAND_5_GHZ;
+#else
 	params.band = WIFI_FREQ_BAND_2_4_GHZ;
-	params.channel = 1;
+#endif
+	params.channel = CONFIG_SOFTAP_CHANNEL;
+
+	if (!wifi_utils_validate_chan(params.band, params.channel)) {
+		LOG_ERR("Invalid SoftAP channel %d for Wi-Fi band %d", params.channel, params.band);
+		return -EINVAL;
+	}
 	params.security = WIFI_SECURITY_TYPE_PSK;
 
 	/* Enable AP mode */
@@ -244,10 +254,10 @@ static int wifi_set_softap(const char *ssid, const char *psk)
 		       sizeof(struct wifi_connect_req_params));
 	if (ret) {
 		LOG_ERR("AP mode enable failed: %s", strerror(-ret));
-	} else {
-		LOG_INF("AP mode enabled");
+		return ret;
 	}
 
+	LOG_INF("AP mode enabled (band %d, channel %d)", params.band, params.channel);
 	return 0;
 }
 

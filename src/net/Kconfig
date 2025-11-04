@@ -117,6 +117,32 @@ config SOFTAP_PASSWORD
 	help
 	  Password for SoftAP mode.
 
+choice SOFTAP_BAND
+	prompt "SoftAP Wi-Fi band"
+	default SOFTAP_BAND_2_4_GHZ
+	help
+	  Select the Wi-Fi band used when hosting the SoftAP.
+
+config SOFTAP_BAND_2_4_GHZ
+	bool "2.4 GHz"
+	help
+	  Use 2.4 GHz band for SoftAP operation.
+
+config SOFTAP_BAND_5_GHZ
+	bool "5 GHz"
+	help
+	  Use 5 GHz band for SoftAP operation.
+
+endchoice
+
+config SOFTAP_CHANNEL
+	int "SoftAP channel"
+	default 1
+	range 1 196
+	help
+	  Wi-Fi channel number used for SoftAP operation. Ensure the selected
+	  channel is valid within the chosen band and regulatory domain.
+
 endmenu # "SoftAP Configuration"
 
 #------------------------------------------------------------------------#
