@@ -31,7 +31,6 @@ This project demonstrates how to use Wi-Fi with UDP sockets for real-time audio 
 - **Earphones/Headphones** with 3.5mm jack
 - **Cable with Double 3.5mm jack Male Header(Optional)** 
 
-> **⚠️ MacBook Compatibility Notice**: The audio gateway device may not work properly with MacBook devices through USB-C due to compatibility issues. For best results, use a Windows or Linux PC as the audio source when USB-C used as audio input.
 
 ### Optional Hardware Modifications for Wi-Fi Audio Headset Device
 - **Enable Battery Power**: Connect nRF7002EK V5V pin to nRF5340 Audio DK TP30 testpoint.
@@ -93,6 +92,26 @@ uart:~$ wifi cred auto_connect
 2. Connect headphones to the headset device
 3. Press play/pause on headset device to start/stop streaming
 4. Use VOL+/- buttons to adjust volume
+
+### 5. SoftAP Direct Audio Link (Gateway ↔ Headset)
+
+When you build the gateway with `overlay-gateway-softap.conf`, the two audio DKs can form a self-contained Wi-Fi link without an external router. The diagram below shows the wiring and roles:
+
+```
+[Wi-Fi Audio Gateway (nRF5340 + nRF7002)] <--Wi-Fi--> [Wi-Fi Audio Headset (nRF5340 + nRF7002)] ──USB-C── [5 V Power Bank]
+        ▲                                              │
+        │ USB-C Audio and Power                        │ 3.5 mm Audio Out
+        │                                              ▼
+      [Windows PC]                                   [Headphones]
+```
+
+Follow these steps for a quick standalone setup:
+
+1. Connect the Wi-Fi Audio Gateway to a Windows PC with a USB-C cable; the board powers up and enumerates as a USB sound card.
+2. Select the **nRF5340 Audio DK** as the audio output device on the PC and start playback.
+3. Power the Wi-Fi Audio Headset from a 5 V USB supply (for example, a USB-C power bank).
+4. Wait for the headset to auto-join the `GatewayAP` Wi-Fi network; a blinking blue LED indicates active streaming.
+5. Plug your headphones into the headset’s 3.5 mm output. Use the play/pause button to toggle streaming as needed.
 
 ## ⚙️ Configuration Guide
 

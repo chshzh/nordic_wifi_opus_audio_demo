@@ -291,29 +291,6 @@ jobs:
             | Audio Gateway SoftAP (USB source) | `nordic-wifi-opus-audio-demo-wifi-opus-audio-gateway-softap-usb-${{ github.ref_name }}.hex` | Gateway hosts Wi-Fi SoftAP, USB audio input |
             | Audio Gateway SoftAP (LINE IN source) | `nordic-wifi-opus-audio-demo-wifi-opus-audio-gateway-softap-line-in-${{ github.ref_name }}.hex` | Gateway hosts Wi-Fi SoftAP, line-in input |
             | Audio Headset | `nordic-wifi-opus-audio-demo-wifi-opus-audio-headset-${{ github.ref_name }}.hex` | Headset role, auto-connects to configured gateway |
-            
-            ### Files:
-            - Individual `.hex` files for each configuration
-            - Complete firmware package: `nordic-wifi-opus-audio-demo-firmware-${{ github.ref_name }}.zip`
-            
-            ### Hardware Support:
-            - **Target Board**: nRF5340 Audio DK (nrf5340_audio_dk/nrf5340/cpuapp)
-            - **Wi-Fi Shield**: nRF7002EK
-            - **NCS Version**: ${{ needs.set-version.outputs.NCS_VERSION }}
-            - **Opus Version**: v1.5.2
-            
-            ### Usage:
-            1. Download the appropriate `.hex` file for your device role (Gateway or Headset)
-            2. Flash to nRF5340 Audio DK using `west flash` or nRF Connect Programmer
-            3. Connect nRF7002EK as shield to nRF5340 Audio DK
-            4. Refer to [README.md](README.md) for Wi-Fi provisioning steps (SoftAP and station modes) and detailed operation guide
-            
-            ### Quick Start:
-            - Flash Gateway firmware to one nRF5340 Audio DK
-            - Flash Headset firmware to another nRF5340 Audio DK
-            - Configure Wi-Fi credentials and start audio streaming
-            
-            Built with NCS ${{ needs.set-version.outputs.NCS_VERSION }}
           files: |
             release-package/*.hex
             nordic-wifi-opus-audio-demo-firmware-*.zip
