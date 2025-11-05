@@ -28,6 +28,7 @@ LOG_MODULE_REGISTER(wifi_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define GATEWAY_SOFTAP_SSID     "GatewayAP"
 #define GATEWAY_SOFTAP_PASSWORD "wifi1234"
+#define GATEWAY_SOFTAP_CHANNEL  165
 
 static char last_connected_ssid[WIFI_SSID_MAX_LEN + 1];
 
@@ -62,7 +63,7 @@ int wifi_utils_ensure_gateway_softap_credentials(void)
 	creds.header.type = WIFI_SECURITY_TYPE_PSK;
 	memcpy(creds.header.ssid, GATEWAY_SOFTAP_SSID, ssid_len);
 	creds.header.ssid_len = ssid_len;
-	creds.header.flags = WIFI_CREDENTIALS_FLAG_FAVORITE | WIFI_CREDENTIALS_FLAG_2_4GHz;
+	creds.header.channel = GATEWAY_SOFTAP_CHANNEL;
 	creds.password_len = strlen(GATEWAY_SOFTAP_PASSWORD);
 	memcpy(creds.password, GATEWAY_SOFTAP_PASSWORD, creds.password_len);
 	creds.password[creds.password_len] = '\0';

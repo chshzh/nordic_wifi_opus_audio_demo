@@ -136,6 +136,19 @@ void socket_utils_clear_target(void)
 
 int socket_utils_tx_data(uint8_t *data, size_t length)
 {
+#if defined(CONFIG_SOCKET_ROLE_SERVER)
+	if (!socket_connected_signall || target_addr.sin_addr.s_addr == 0) {
+		errno = ENOTCONN;
+		LOG_DBG("Socket target not ready, dropping %zu byte payload", length);
+		return -ENOTCONN;
+	}
+#else
+	if (!serveraddr_set_signall || target_addr.sin_addr.s_addr == 0) {
+		errno = ENOTCONN;
+		LOG_DBG("Socket target unknown, dropping %zu byte payload", length);
+		return -ENOTCONN;
+	}
+#endif
 
 	size_t chunk_size = 1024;
 	ssize_t bytes_sent = 0;
@@ -207,6 +220,16 @@ int do_mdns_query(void)
 	return 0;
 }
 #endif /* CONFIG_MDNS_RESOLVER */
+
+#if defined(CONFIG_SOCKET_ROLE_SERVER)
+void socket_utils_softap_handle_disconnect(void)
+{
+	socket_connected_signall = false;
+	memset(&target_addr, 0, sizeof(target_addr));
+	target_addr_len = sizeof(target_addr);
+	LOG_INF("SoftAP client disconnected, socket target cleared");
+}
+#endif
 
 /* Thread to setup WiFi, Sockets step by step */
 void socket_utils_thread(void)

@@ -32,4 +32,8 @@ uint8_t stream_state_get(void);
  */
 void streamctrl_send(void const *const data, size_t size);
 
+#if defined(CONFIG_SOCKET_ROLE_SERVER)
+void streamctrl_handle_client_disconnect(void);
+#endif
+
 #endif /* _STREAMCTRL_H_ */

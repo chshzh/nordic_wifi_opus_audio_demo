@@ -25,6 +25,10 @@ void socket_utils_set_rx_callback(net_util_socket_rx_callback_t socket_rx_callba
 int socket_utils_tx_data(uint8_t *data, size_t length);
 void socket_utils_thread(void);
 
+#if defined(CONFIG_SOCKET_ROLE_SERVER)
+void socket_utils_softap_handle_disconnect(void);
+#endif
+
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
 bool socket_utils_is_target_set(void);
 void socket_utils_set_target_ipv4(const struct in_addr *addr);

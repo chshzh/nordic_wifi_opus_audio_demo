@@ -71,6 +71,23 @@ uint8_t stream_state_get(void)
 	return strm_state;
 }
 
+#if defined(CONFIG_SOCKET_ROLE_SERVER)
+void streamctrl_handle_client_disconnect(void)
+{
+	if (strm_state != STATE_STREAMING) {
+		return;
+	}
+
+	LOG_INF("Station disconnected, pausing audio stream");
+	audio_system_encoder_stop();
+	stream_state_set(STATE_PAUSED);
+	int ret = led_on(LED_APP_1_BLUE);
+	if (ret) {
+		LOG_WRN("Failed to update status LED: %d", ret);
+	}
+}
+#endif
+
 void socket_rx_handler(uint8_t *socket_rx_buf, size_t len)
 {
 	if (len < 5) {
@@ -123,7 +140,7 @@ void socket_rx_handler(uint8_t *socket_rx_buf, size_t len)
 
 void streamctrl_send(void const *const data, size_t size)
 {
-	if (strm_state == STATE_STREAMING) {
+	if ((strm_state == STATE_STREAMING) && socket_connected_signall) {
 		socket_utils_tx_data((uint8_t *)data, size);
 	}
 }

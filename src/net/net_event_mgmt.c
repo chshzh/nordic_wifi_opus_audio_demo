@@ -15,9 +15,8 @@
 #include "net_event_mgmt.h"
 #include "wifi_utils.h"
 #include "led.h"
-#if IS_ENABLED(CONFIG_SOCKET_ROLE_CLIENT)
 #include "socket_utils.h"
-#endif
+#include "streamctrl.h"
 
 LOG_MODULE_REGISTER(net_event_mgmt, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -230,6 +229,10 @@ static void handle_station_disconnected(struct net_mgmt_event_callback *cb)
 		LOG_INF("No stations remaining connected to SoftAP");
 		/* Note: UDP server continues running even if no stations connected */
 		/* This allows for immediate packet reception when a new station connects */
+#if defined(CONFIG_SOCKET_ROLE_SERVER)
+		socket_utils_softap_handle_disconnect();
+		streamctrl_handle_client_disconnect();
+#endif
 	}
 }
 
@@ -284,7 +287,11 @@ static void l2_wifi_conn_event_handler(struct net_mgmt_event_callback *cb, uint3
 				LOG_ERR("  Reason: Association timeout");
 				break;
 			default:
-				LOG_ERR("  Reason: Unknown error code %d", status->status);
+				LOG_ERR("  Reason: Unknown error code %d, rebooting to "
+					"reconnect...",
+					status->status);
+				k_sleep(K_SECONDS(3));
+				sys_reboot(SYS_REBOOT_WARM);
 				break;
 			}
 		}
