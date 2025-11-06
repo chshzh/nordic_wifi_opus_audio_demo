@@ -63,7 +63,7 @@ int wifi_utils_ensure_gateway_softap_credentials(void)
 	creds.header.type = WIFI_SECURITY_TYPE_PSK;
 	memcpy(creds.header.ssid, GATEWAY_SOFTAP_SSID, ssid_len);
 	creds.header.ssid_len = ssid_len;
-	creds.header.channel = GATEWAY_SOFTAP_CHANNEL;
+	// creds.header.channel = GATEWAY_SOFTAP_CHANNEL;
 	creds.password_len = strlen(GATEWAY_SOFTAP_PASSWORD);
 	memcpy(creds.password, GATEWAY_SOFTAP_PASSWORD, creds.password_len);
 	creds.password[creds.password_len] = '\0';
