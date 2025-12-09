@@ -11,19 +11,12 @@
 #include <stdint.h>
 
 /*
- * Calculate the number of bytes of one frame, as per now, this frame can either
- * be 10 or 7.5 ms. Since we can't have floats in a define we use 15/2 instead
+ * Calculate the number of bytes of one frame based on configured frame duration.
+ * Samples per frame = sample_rate * frame_duration_us / 1_000_000.
  */
-
-#if ((CONFIG_AUDIO_FRAME_DURATION_US == 7500) && CONFIG_SW_CODEC_LC3)
-
 #define FRAME_SIZE_BYTES                                                                           \
-	((CONFIG_I2S_LRCK_FREQ_HZ / 1000 * 15 / 2) * CONFIG_I2S_CH_NUM *                           \
-	 CONFIG_AUDIO_BIT_DEPTH_OCTETS)
-#else
-#define FRAME_SIZE_BYTES                                                                           \
-	((CONFIG_I2S_LRCK_FREQ_HZ / 1000 * 10) * CONFIG_I2S_CH_NUM * CONFIG_AUDIO_BIT_DEPTH_OCTETS)
-#endif /* ((CONFIG_AUDIO_FRAME_DURATION_US == 7500) && CONFIG_SW_CODEC_LC3) */
+	((CONFIG_I2S_LRCK_FREQ_HZ * CONFIG_AUDIO_FRAME_DURATION_US / 1000000) *                    \
+	 CONFIG_I2S_CH_NUM * CONFIG_AUDIO_BIT_DEPTH_OCTETS)
 
 #define BLOCK_SIZE_BYTES (FRAME_SIZE_BYTES / CONFIG_FIFO_FRAME_SPLIT_NUM)
 

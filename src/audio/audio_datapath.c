@@ -1091,8 +1091,17 @@ int audio_datapath_init(void)
 		 * qhave presentation compensation.
 		 */
 		ctrl_blk.pres_comp.enabled = false;
-	} else {
-		ctrl_blk.pres_comp.enabled = true;
+	}
+
+	/* For headset playback we want lowest latency; disable presentation compensation
+	 * to avoid adding extra buffering/adjustment.
+	 */
+	if (IS_ENABLED(CONFIG_AUDIO_HEADSET)) {
+		ctrl_blk.pres_comp.enabled = false;
+		/* For lowest latency on playback, also disable drift compensation to avoid
+		 * added timing regulation overhead on the headset side.
+		 */
+		ctrl_blk.drift_comp.enabled = false;
 	}
 
 	ctrl_blk.pres_comp.pres_delay_us = CONFIG_BT_AUDIO_PRESENTATION_DELAY_US;

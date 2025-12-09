@@ -10,12 +10,15 @@ rsource "Kconfig.defaults"
 menu "Audio"
 
 choice AUDIO_FRAME_DURATION
-	prompt "Select frame duration - 7.5 ms frame duration is not tested"
+	prompt "Select frame duration - smaller values reduce latency"
 	default AUDIO_FRAME_DURATION_10_MS
 	help
 	  LC3 supports frame duration of 7.5 and 10 ms.
-	  If USB is selected as audio source, we should
-	  have a frame duration of 10 ms since USB sends 1ms at a time.
+	  Opus supports 2.5/5/10/20 ms frame duration (2.5 ms is experimental).
+	  If USB is selected as audio source, 10 ms is recommended since USB sends 1 ms slices.
+
+config AUDIO_FRAME_DURATION_5_MS
+	bool "5 ms"
 
 config AUDIO_FRAME_DURATION_7_5_MS
 	bool "7.5 ms"
@@ -26,6 +29,7 @@ endchoice
 
 config AUDIO_FRAME_DURATION_US
 	int
+	default 5000 if AUDIO_FRAME_DURATION_5_MS
 	default 7500 if AUDIO_FRAME_DURATION_7_5_MS
 	default 10000 if AUDIO_FRAME_DURATION_10_MS
 	help
