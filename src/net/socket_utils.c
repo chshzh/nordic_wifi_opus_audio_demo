@@ -186,10 +186,10 @@ int do_mdns_query(void)
 	for (int i = 1; i <= CONFIG_MDNS_QUERY_ATTEMPTS; i++) {
 		err = getaddrinfo(CONFIG_MDNS_QUERY_NAME, NULL, &hints, &result);
 		if (!err) {
-			LOG_INF("Got address at attempt %d", i);
+			LOG_INF("Got address from mDNS at attempt %d", i);
 			break;
 		}
-		LOG_DBG("Failed to get address at attempt %d, error %d", i, err);
+		LOG_DBG("Failed to get address from mDNS at attempt %d, error %d", i, err);
 	}
 	if (err) {
 		LOG_ERR("getaddrinfo() failed, error %d", err);
