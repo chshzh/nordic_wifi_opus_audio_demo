@@ -10,6 +10,7 @@
 #include <supp_events.h>
 #include <zephyr/net/socket.h>
 #include <stdio.h>
+#include <errno.h>
 #include <zephyr/sys/reboot.h>
 
 #include "net_event_mgmt.h"
@@ -286,12 +287,12 @@ static void l2_wifi_conn_event_handler(struct net_mgmt_event_callback *cb, uint3
 			case 16:
 				LOG_ERR("  Reason: Association timeout");
 				break;
+			case -ETIMEDOUT:
+				LOG_ERR("  Reason: Connection timed out (-ETIMEDOUT), please check "
+					"your WiFi credentials or if the AP is available");
+				break;
 			default:
-				LOG_ERR("  Reason: Unknown error code %d, rebooting to "
-					"reconnect...",
-					status->status);
-				k_sleep(K_SECONDS(3));
-				sys_reboot(SYS_REBOOT_WARM);
+				LOG_ERR("  Reason: Unknown error code %d", status->status);
 				break;
 			}
 		}
