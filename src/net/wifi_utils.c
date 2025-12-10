@@ -20,9 +20,6 @@
 #include <string.h>
 
 #include "wifi_utils.h"
-#if defined(CONFIG_SOCKET_ROLE_CLIENT)
-#include "socket_utils.h"
-#endif
 
 LOG_MODULE_REGISTER(wifi_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -384,21 +381,6 @@ void wifi_print_dhcp_ip(struct net_mgmt_event_callback *cb)
 
 	net_addr_ntop(AF_INET, addr, dhcp_info, sizeof(dhcp_info));
 	LOG_INF("\r\n\r\nDevice IP address: %s\r\n", dhcp_info);
-#if defined(CONFIG_SOCKET_ROLE_CLIENT)
-	const char *connected_ssid = wifi_utils_get_last_ssid();
-
-	if ((connected_ssid != NULL) &&
-	    (strncmp(connected_ssid, GATEWAY_SOFTAP_SSID, WIFI_SSID_MAX_LEN) == 0) &&
-	    !socket_utils_is_target_set()) {
-		struct in_addr gateway_addr;
-
-		if (inet_pton(AF_INET, "192.168.1.1", &gateway_addr) == 1) {
-			socket_utils_set_target_ipv4(&gateway_addr);
-		} else {
-			LOG_WRN("Failed to parse static gateway address");
-		}
-	}
-#endif
 }
 #else
 void wifi_print_dhcp_ip(struct net_mgmt_event_callback *cb)
