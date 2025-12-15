@@ -9,6 +9,7 @@
 #include <zephyr/net/dhcpv4_server.h>
 #include <supp_events.h>
 #include <zephyr/net/socket.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <errno.h>
 #include <zephyr/sys/reboot.h>
@@ -22,13 +23,15 @@
 LOG_MODULE_REGISTER(net_event_mgmt, CONFIG_LOG_DEFAULT_LEVEL);
 
 /* Event masks for different network layers */
-#define L2_IF_EVENT_MASK        (NET_EVENT_IF_DOWN | NET_EVENT_IF_UP)
-#define L2_WIFI_CONN_EVENT_MASK (NET_EVENT_WIFI_CONNECT_RESULT | NET_EVENT_WIFI_DISCONNECT_RESULT)
+#define L2_IF_EVENT_MASK ((uint64_t)(NET_EVENT_IF_DOWN | NET_EVENT_IF_UP))
+#define L2_WIFI_CONN_EVENT_MASK                                                                    \
+	((uint64_t)(NET_EVENT_WIFI_CONNECT_RESULT | NET_EVENT_WIFI_DISCONNECT_RESULT))
 #define L2_WIFI_SOFTAP_EVENT_MASK                                                                  \
-	(NET_EVENT_WIFI_AP_ENABLE_RESULT | NET_EVENT_WIFI_AP_STA_CONNECTED |                       \
-	 NET_EVENT_WIFI_AP_STA_DISCONNECTED)
-#define L3_WPA_SUPP_EVENT_MASK (NET_EVENT_SUPPLICANT_READY | NET_EVENT_SUPPLICANT_NOT_READY)
-#define L3_IPV4_EVENT_MASK     NET_EVENT_IPV4_DHCP_BOUND
+	((uint64_t)(NET_EVENT_WIFI_AP_ENABLE_RESULT | NET_EVENT_WIFI_AP_STA_CONNECTED |            \
+		    NET_EVENT_WIFI_AP_STA_DISCONNECTED))
+#define L3_WPA_SUPP_EVENT_MASK                                                                     \
+	((uint64_t)(NET_EVENT_SUPPLICANT_READY | NET_EVENT_SUPPLICANT_NOT_READY))
+#define L3_IPV4_EVENT_MASK ((uint64_t)NET_EVENT_IPV4_DHCP_BOUND)
 
 /* Define network event semaphores */
 K_SEM_DEFINE(iface_up_sem, 0, 1);
@@ -58,7 +61,7 @@ struct softap_station {
 static struct softap_station connected_stations[MAX_SOFTAP_STATIONS];
 #endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_AP */
 
-static void l2_iface_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+static void l2_iface_event_handler(struct net_mgmt_event_callback *cb, uint64_t mgmt_event,
 				   struct net_if *iface)
 {
 	char ifname[IFNAMSIZ + 1] = {0};
@@ -82,7 +85,7 @@ static void l2_iface_event_handler(struct net_mgmt_event_callback *cb, uint32_t 
 		LOG_INF("Network interface %s is down", ifname);
 		break;
 	default:
-		LOG_DBG("Unhandled network event: 0x%08X", mgmt_event);
+		LOG_DBG("Unhandled network event: 0x%08" PRIx64, mgmt_event);
 		break;
 	}
 }
@@ -237,7 +240,7 @@ static void handle_station_disconnected(struct net_mgmt_event_callback *cb)
 	}
 }
 
-static void l2_wifi_softap_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+static void l2_wifi_softap_event_handler(struct net_mgmt_event_callback *cb, uint64_t mgmt_event,
 					 struct net_if *iface)
 {
 	switch (mgmt_event) {
@@ -257,7 +260,7 @@ static void l2_wifi_softap_event_handler(struct net_mgmt_event_callback *cb, uin
 #endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_AP */
 
 /* Enhanced WiFi management event handler for L2 events */
-static void l2_wifi_conn_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+static void l2_wifi_conn_event_handler(struct net_mgmt_event_callback *cb, uint64_t mgmt_event,
 				       struct net_if *iface)
 {
 	switch (mgmt_event) {
@@ -309,13 +312,13 @@ static void l2_wifi_conn_event_handler(struct net_mgmt_event_callback *cb, uint3
 	} break;
 
 	default:
-		LOG_DBG("Unhandled WiFi event: 0x%08X", mgmt_event);
+		LOG_DBG("Unhandled WiFi event: 0x%08" PRIx64, mgmt_event);
 		break;
 	}
 }
 
 /* wpa supplicant events */
-static void l3_wpa_supp_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+static void l3_wpa_supp_event_handler(struct net_mgmt_event_callback *cb, uint64_t mgmt_event,
 				      struct net_if *iface)
 {
 	switch (mgmt_event) {
@@ -327,13 +330,13 @@ static void l3_wpa_supp_event_handler(struct net_mgmt_event_callback *cb, uint32
 		LOG_ERR("WPA Supplicant is not ready");
 		break;
 	default:
-		LOG_DBG("Unhandled WPA Supplicant event: 0x%08X", mgmt_event);
+		LOG_DBG("Unhandled WPA Supplicant event: 0x%08" PRIx64, mgmt_event);
 		break;
 	}
 }
 
 /* Enhanced network management event handler for L3 events */
-static void l3_ipv4_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
+static void l3_ipv4_event_handler(struct net_mgmt_event_callback *cb, uint64_t mgmt_event,
 				  struct net_if *iface)
 {
 	if ((mgmt_event & L3_IPV4_EVENT_MASK) != mgmt_event) {
@@ -350,7 +353,7 @@ static void l3_ipv4_event_handler(struct net_mgmt_event_callback *cb, uint32_t m
 		k_sem_give(&ipv4_dhcp_bond_sem);
 		break;
 	default:
-		LOG_DBG("Unhandled network event: 0x%08X", mgmt_event);
+		LOG_DBG("Unhandled network event: 0x%08" PRIx64, mgmt_event);
 		break;
 	}
 }

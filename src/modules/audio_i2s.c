@@ -16,8 +16,6 @@
 
 #define I2S_NL DT_NODELABEL(i2s0)
 
-#define HFCLKAUDIO_12_288_MHZ 0x9BAE
-
 enum audio_i2s_state {
 	AUDIO_I2S_STATE_UNINIT,
 	AUDIO_I2S_STATE_IDLE,
@@ -29,16 +27,16 @@ static enum audio_i2s_state state = AUDIO_I2S_STATE_UNINIT;
 PINCTRL_DT_DEFINE(I2S_NL);
 
 #if CONFIG_AUDIO_SAMPLE_RATE_16000_HZ
-#define CONFIG_AUDIO_RATIO NRF_I2S_RATIO_384X
+#define I2S_RATIO NRF_I2S_RATIO_384X
 #elif CONFIG_AUDIO_SAMPLE_RATE_24000_HZ
-#define CONFIG_AUDIO_RATIO NRF_I2S_RATIO_256X
+#define I2S_RATIO NRF_I2S_RATIO_256X
 #elif CONFIG_AUDIO_SAMPLE_RATE_48000_HZ
-#define CONFIG_AUDIO_RATIO NRF_I2S_RATIO_128X
+#define I2S_RATIO NRF_I2S_RATIO_128X
 #else
 #error "Current AUDIO_SAMPLE_RATE_HZ setting not supported"
 #endif
 
-static nrfx_i2s_t i2s_inst = NRFX_I2S_INSTANCE(0);
+static nrfx_i2s_t i2s_inst = NRFX_I2S_INSTANCE(NRF_I2S0);
 
 static nrfx_i2s_config_t cfg = {
 	/* Pins are configured by pinctrl. */
@@ -48,8 +46,12 @@ static nrfx_i2s_config_t cfg = {
 	.mode = NRF_I2S_MODE_MASTER,
 	.format = NRF_I2S_FORMAT_I2S,
 	.alignment = NRF_I2S_ALIGN_LEFT,
-	.ratio = CONFIG_AUDIO_RATIO,
-	.mck_setup = 0x66666000,
+	.prescalers =
+		{
+			.ratio = I2S_RATIO,
+			.mck_setup = 0x66666000,
+			.enable_bypass = false,
+		},
 #if (CONFIG_AUDIO_BIT_DEPTH_16)
 	.sample_width = NRF_I2S_SWIDTH_16BIT,
 #elif (CONFIG_AUDIO_BIT_DEPTH_32)
@@ -59,19 +61,16 @@ static nrfx_i2s_config_t cfg = {
 #endif /* (CONFIG_AUDIO_BIT_DEPTH_16) */
 	.channels = NRF_I2S_CHANNELS_STEREO,
 	.clksrc = NRF_I2S_CLKSRC_ACLK,
-	.enable_bypass = false,
 };
 
 static i2s_blk_comp_callback_t i2s_blk_comp_callback;
 
 static void i2s_comp_handler(nrfx_i2s_buffers_t const *released_bufs, uint32_t status)
 {
-	uint32_t frame_start_ts = audio_sync_timer_capture_get();
-
 	if ((status == NRFX_I2S_STATUS_NEXT_BUFFERS_NEEDED) && released_bufs &&
 	    i2s_blk_comp_callback && (released_bufs->p_rx_buffer || released_bufs->p_tx_buffer)) {
-		i2s_blk_comp_callback(frame_start_ts, released_bufs->p_rx_buffer,
-				      released_bufs->p_tx_buffer);
+		i2s_blk_comp_callback(audio_sync_timer_frame_start_capture_get(),
+				      released_bufs->p_rx_buffer, released_bufs->p_tx_buffer);
 	}
 }
 
@@ -152,7 +151,7 @@ void audio_i2s_init(void)
 	ret = pinctrl_apply_state(PINCTRL_DT_DEV_CONFIG_GET(I2S_NL), PINCTRL_STATE_DEFAULT);
 	__ASSERT_NO_MSG(ret == 0);
 
-	IRQ_CONNECT(DT_IRQN(I2S_NL), DT_IRQ(I2S_NL, priority), nrfx_isr, nrfx_i2s_0_irq_handler, 0);
+	IRQ_CONNECT(DT_IRQN(I2S_NL), DT_IRQ(I2S_NL, priority), nrfx_i2s_irq_handler, &i2s_inst, 0);
 	irq_enable(DT_IRQN(I2S_NL));
 
 	ret = nrfx_i2s_init(&i2s_inst, &cfg, i2s_comp_handler);

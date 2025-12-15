@@ -136,8 +136,10 @@ int nrf5340_audio_dk_init(void)
 
 	/* Use this to turn on 128 MHz clock for cpu_app */
 	ret = nrfx_clock_divider_set(NRF_CLOCK_DOMAIN_HFCLK, NRF_CLOCK_HFCLK_DIV_1);
-	ret -= NRFX_ERROR_BASE_NUM;
+	/* In NCS v3.2.0, nrfx_clock_divider_set returns 0 on success or -ENOTSUP/-EINVAL on error,
+	 * not NRFX_ERROR_* codes. Removed the incorrect NRFX_ERROR_BASE_NUM subtraction. */
 	if (ret) {
+		LOG_ERR("Failed to set HFCLK divider: %d", ret);
 		return ret;
 	}
 

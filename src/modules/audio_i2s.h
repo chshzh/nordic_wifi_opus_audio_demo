@@ -10,6 +10,11 @@
 #include <zephyr/kernel.h>
 #include <stdint.h>
 
+/* HFCLKAUDIO values from nRF5340 documentation */
+#define HFCLKAUDIO_12_288_MHZ 0x9BA6
+#define HFCLKAUDIO_12_165_MHZ 0x8FD8
+#define HFCLKAUDIO_12_411_MHZ 0xA774
+
 /*
  * Calculate the number of bytes of one frame, as per now, this frame can either
  * be 10 or 7.5 ms. Since we can't have floats in a define we use 15/2 instead
