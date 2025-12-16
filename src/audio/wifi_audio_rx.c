@@ -13,9 +13,6 @@
 #include "audio_sync_timer.h"
 #include "wifi_audio_rx.h"
 #include "socket_utils.h"
-#ifdef CONFIG_LATENCY_MEASUREMENT
-#include "latency_measure.h"
-#endif
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(wifi_audio_rx, CONFIG_WIFI_AUDIO_RX_LOG_LEVEL);
@@ -193,11 +190,6 @@ void wifi_audio_rx_data_handler(uint8_t *p_data, size_t data_size)
 						current_frame_size - HEADER_SIZE - FOOTER_SIZE;
 					if (audio_data_length <= MAX_AUDIO_FRAME_SIZE) {
 
-#ifdef CONFIG_LATENCY_MEASUREMENT
-						/* T5: Network reception timing point */
-						latency_measure_t5_network_rx();
-#endif
-
 						// Process the audio data
 						audio_data_frame_process(frame_buffer + HEADER_SIZE,
 									 audio_data_length);
@@ -331,10 +323,6 @@ void send_audio_frame(uint8_t *audio_data, size_t data_length)
 
 	// Send the prepared data packet
 	socket_utils_tx_data(data_packet, total_packet_size);
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	/* T4: Network transmission timing point */
-	latency_measure_t4_network_tx();
-#endif
 
 	// Free allocated memory
 	k_free(data_packet);

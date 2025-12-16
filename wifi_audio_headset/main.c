@@ -20,7 +20,6 @@
 #include "macros_common.h"
 #include "audio_system.h"
 #include "audio_datapath.h"
-#include "latency_measure.h"
 #include "fw_info_app.h"
 #include "streamctrl.h"
 #include "socket_utils.h"
@@ -61,7 +60,8 @@ K_THREAD_STACK_DEFINE(button_msg_sub_thread_stack, CONFIG_BUTTON_MSG_SUB_STACK_S
 K_THREAD_STACK_DEFINE(le_audio_msg_sub_thread_stack, CONFIG_LE_AUDIO_MSG_SUB_STACK_SIZE);
 
 static enum stream_state strm_state = STATE_PAUSED;
-static enum stream_state prev_stream_state = STATE_PAUSED;
+
+/* Forward declaration */
 static void stream_state_set(enum stream_state stream_state_new);
 
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
@@ -90,11 +90,8 @@ static void socket_target_ready_handler(void)
 /* Function for handling all stream state changes */
 static void stream_state_set(enum stream_state stream_state_new)
 {
-	if (stream_state_new != prev_stream_state) {
-		LOG_INF("Stream state changed from %d to %d", strm_state, stream_state_new);
-		strm_state = stream_state_new;
-	}
-	prev_stream_state = strm_state;
+	LOG_INF("Stream state changed from %d to %d", strm_state, stream_state_new);
+	strm_state = stream_state_new;
 }
 
 uint8_t stream_state_get(void)
@@ -150,14 +147,6 @@ static void button_msg_sub_thread(void)
 		switch (msg.button_pin) {
 		case BUTTON_PLAY_PAUSE:
 			if (serveraddr_set_signall == true) {
-#ifdef CONFIG_LATENCY_MEASUREMENT
-				/* In latency measurement mode, use BUTTON_PLAY_PAUSE to trigger
-				 * latency test */
-				LOG_INF("Triggering latency measurement test.");
-				stream_state_set(STATE_STREAMING);
-				send_audio_command(AUDIO_LATENCY_TEST_CMD);
-#else
-				/* Normal audio control functionality */
 				if (strm_state == STATE_STREAMING) {
 					send_audio_command(AUDIO_STOP_CMD);
 					stream_state_set(STATE_PAUSED);
@@ -173,7 +162,6 @@ static void button_msg_sub_thread(void)
 				} else {
 					LOG_WRN("In invalid state: %d", strm_state);
 				}
-#endif
 			} else {
 				LOG_WRN("Please set socket server address first!");
 			}
@@ -389,14 +377,6 @@ int main(void)
 
 	ret = nrf5340_audio_dk_init();
 	ERR_CHK(ret);
-
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	LOG_INF("latency_measure_init");
-	ret = latency_measure_init();
-	ERR_CHK(ret);
-#else
-	LOG_INF("Latency measurement disabled in configuration");
-#endif
 
 	ret = fw_info_app_print();
 	ERR_CHK(ret);

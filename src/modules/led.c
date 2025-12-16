@@ -232,10 +232,6 @@ static int led_set(uint8_t led_unit, enum led_color color, bool blink)
 
 int led_on(uint8_t led_unit, ...)
 {
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	/* Do nothing when latency measurement is enabled to avoid GPIO conflicts */
-	return 0;
-#else
 	if (led_units[led_unit].unit_type == LED_MONOCHROME) {
 		return led_set(led_unit, LED_ON, LED_SOLID);
 	}
@@ -252,15 +248,10 @@ int led_on(uint8_t led_unit, ...)
 		return -EINVAL;
 	}
 	return led_set(led_unit, color, LED_SOLID);
-#endif
 }
 
 int led_blink(uint8_t led_unit, ...)
 {
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	/* Do nothing when latency measurement is enabled to avoid GPIO conflicts */
-	return 0;
-#else
 	if (led_units[led_unit].unit_type == LED_MONOCHROME) {
 		return led_set(led_unit, LED_ON, LED_BLINK);
 	}
@@ -279,25 +270,15 @@ int led_blink(uint8_t led_unit, ...)
 	}
 
 	return led_set(led_unit, color, LED_BLINK);
-#endif
 }
 
 int led_off(uint8_t led_unit)
 {
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	/* Do nothing when latency measurement is enabled to avoid GPIO conflicts */
-	return 0;
-#else
 	return led_set(led_unit, LED_COLOR_OFF, LED_SOLID);
-#endif
 }
 
 int led_init(void)
 {
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	/* Do nothing when latency measurement is enabled to avoid GPIO conflicts */
-	return 0;
-#else
 	int ret;
 
 	if (initialized) {
@@ -316,5 +297,4 @@ int led_init(void)
 	k_timer_start(&led_blink_timer, K_MSEC(BLINK_FREQ_MS / 2), K_MSEC(BLINK_FREQ_MS / 2));
 	initialized = true;
 	return 0;
-#endif
 }

@@ -29,10 +29,6 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(audio_datapath, CONFIG_AUDIO_DATAPATH_LOG_LEVEL);
 
-#ifdef CONFIG_LATENCY_MEASUREMENT
-#include "latency_measure.h"
-#endif
-
 #if (CONFIG_SW_CODEC_OPUS)
 #include "opus_interface.h"
 extern DEC_Opus_ConfigTypeDef DecConfigOpus; /*!< opus encode configuration.*/
@@ -652,13 +648,8 @@ static void audio_datapath_i2s_blk_complete(uint32_t frame_start_ts_us, uint32_t
 
 				tx_buf = (uint8_t *)&ctrl_blk.out
 						 .fifo[next_out_blk_idx * BLK_STEREO_NUM_SAMPS];
-#ifdef CONFIG_LATENCY_MEASUREMENT
-				/* T8: Audio output timing point */
-				latency_measure_t8_audio_output();
-#endif
 
 			} else {
-#ifndef CONFIG_LATENCY_MEASUREMENT
 				if (stream_state_get() == STATE_STREAMING) {
 					underrun_condition = true;
 					ctrl_blk.out.total_blk_underruns++;
@@ -669,7 +660,6 @@ static void audio_datapath_i2s_blk_complete(uint32_t frame_start_ts_us, uint32_t
 							ctrl_blk.out.total_blk_underruns);
 					}
 				}
-#endif
 				/*
 				 * No data available in out.fifo
 				 * use alternative buffers
@@ -955,10 +945,6 @@ void audio_datapath_stream_out(const uint8_t *buf, size_t size)
 
 	size_t pcm_size = 0;
 
-	/* T6: Decode start timing point */
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	latency_measure_t6_decode_start();
-#endif
 #if (CONFIG_SW_CODEC_OPUS)
 	int ret;
 
@@ -966,18 +952,7 @@ void audio_datapath_stream_out(const uint8_t *buf, size_t size)
 	if (ret) {
 		LOG_WRN("SW codec decode error: %d", ret);
 	}
-	/* T7: Decode complete timing point */
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	latency_measure_t7_decode_complete();
-#endif
-
 #else
-
-	/* T7: Decode complete timing point */
-#ifdef CONFIG_LATENCY_MEASUREMENT
-	latency_measure_t7_decode_complete();
-#endif
-
 	pcm_size = BLK_STEREO_SIZE_OCTETS * NUM_BLKS_IN_FRAME;
 #endif
 
