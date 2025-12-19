@@ -26,10 +26,6 @@
 
 LOG_MODULE_REGISTER(wifi_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
-#define GATEWAY_SOFTAP_SSID     "GatewayAP"
-#define GATEWAY_SOFTAP_PASSWORD "wifi1234"
-#define GATEWAY_SOFTAP_CHANNEL  165
-
 static char last_connected_ssid[WIFI_SSID_MAX_LEN + 1];
 
 const char *wifi_utils_get_last_ssid(void)
@@ -47,32 +43,31 @@ int wifi_utils_ensure_gateway_softap_credentials(void)
 	return -ENOTSUP;
 #else
 	struct wifi_credentials_personal creds = {0};
-	size_t ssid_len = strlen(GATEWAY_SOFTAP_SSID);
+	size_t ssid_len = strlen(CONFIG_SOFTAP_SSID);
 	int ret =
-		wifi_credentials_get_by_ssid_personal_struct(GATEWAY_SOFTAP_SSID, ssid_len, &creds);
+		wifi_credentials_get_by_ssid_personal_struct(CONFIG_SOFTAP_SSID, ssid_len, &creds);
 
 	if (ret == 0) {
 		return 0;
 	}
 
 	if (ret != -ENOENT) {
-		LOG_ERR("Failed to read stored credentials for %s: %d", GATEWAY_SOFTAP_SSID, ret);
+		LOG_ERR("Failed to read stored credentials for %s: %d", CONFIG_SOFTAP_SSID, ret);
 		return ret;
 	}
 
 	creds.header.type = WIFI_SECURITY_TYPE_PSK;
-	memcpy(creds.header.ssid, GATEWAY_SOFTAP_SSID, ssid_len);
+	memcpy(creds.header.ssid, CONFIG_SOFTAP_SSID, ssid_len);
 	creds.header.ssid_len = ssid_len;
-	// creds.header.channel = GATEWAY_SOFTAP_CHANNEL;
-	creds.password_len = strlen(GATEWAY_SOFTAP_PASSWORD);
-	memcpy(creds.password, GATEWAY_SOFTAP_PASSWORD, creds.password_len);
+	creds.password_len = strlen(CONFIG_SOFTAP_PASSWORD);
+	memcpy(creds.password, CONFIG_SOFTAP_PASSWORD, creds.password_len);
 	creds.password[creds.password_len] = '\0';
 
 	ret = wifi_credentials_set_personal_struct(&creds);
 	if (ret == 0) {
-		LOG_INF("Stored default Wi-Fi credentials for %s", GATEWAY_SOFTAP_SSID);
+		LOG_INF("Stored default Wi-Fi credentials for %s", CONFIG_SOFTAP_SSID);
 	} else {
-		LOG_ERR("Failed to store default credentials for %s: %d", GATEWAY_SOFTAP_SSID, ret);
+		LOG_ERR("Failed to store default credentials for %s: %d", CONFIG_SOFTAP_SSID, ret);
 	}
 
 	return ret;
