@@ -2,7 +2,7 @@
 
 [![Build and Test Wi-Fi Opus Audio Demo](https://github.com/chshzh/nordic_wifi_opus_audio_demo/actions/workflows/build.yml/badge.svg)](https://github.com/chshzh/nordic_wifi_opus_audio_demo/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/License-LicenseRef--Nordic--5--Clause-blue.svg)](LICENSE)
-[![NCS Version](https://img.shields.io/badge/NCS-v3.2.0-green.svg)](https://www.nordicsemi.com/Products/Development-software/nRF-Connect-SDK)
+[![NCS Version](https://img.shields.io/badge/NCS-v3.2.1-green.svg)](https://www.nordicsemi.com/Products/Development-software/nRF-Connect-SDK)
 ![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF7002EK-blue)
 ![Nordic Semiconductor](https://img.shields.io/badge/Nordic%20Semiconductor-nRF5340_Audio_DK-red)
 
@@ -19,7 +19,7 @@ This project demonstrates how to use Wi-Fi with UDP sockets for real-time audio 
 - **Multiple Wi-Fi Modes**: Station mode with credential shell/static configuration and SoftAP mode for gateway-led pairing
 - **Dual Device Setup**: Audio Gateway and Headset device roles
 - **Battery Power Support**: Optional battery operation for headset device
-- **DNS-SD Service Discovery**: Gateway advertises audio service via DNS-SD (mDNS responder) for automatic audio gateway discovery on local networks
+- **Gateway Auto Discovery**: Gateway advertises audio service via DNS-SD (mDNS responder) for automatic audio gateway discovery on local networks.
 
 ## 🔧 Hardware Requirements
 
@@ -42,7 +42,7 @@ The following picture shows a setup where the Audio Gateway (top) device uses LI
 
 ### Software Requirements
 **SW:** 
-- **NCS v3.2.0** - Nordic Connect SDK
+- **NCS v3.2.1** - Nordic Connect SDK
 - **Opus v1.5.2** - Audio codec library
 
 ## 🚀 Quick Start Guide
@@ -253,10 +253,6 @@ uart:~$ wifi cred auto_connect
 ```
 
 The device will remember this set of credential and autoconnect to target router after reset.
-
-**Gateway Discovery Methods:**
-- **DNS-SD (preferred)**: When both devices are connected to a router/network with mDNS support, the headset automatically discovers the gateway using DNS-SD service advertisements (`_nrfwifiaudio._udp.local`)
-- **UDP-based discovery (fallback)**: When connected to the gateway's SoftAP mode, or if DNS-SD is unavailable, the headset discovers the gateway's IP address from the first received UDP packet
 
 #### 2) Set Audio Gateway as Output on PC and Start Audio Streaming
 
