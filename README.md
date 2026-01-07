@@ -19,7 +19,7 @@ This project demonstrates how to use Wi-Fi with UDP sockets for real-time audio 
 - **Multiple Wi-Fi Modes**: Station mode with credential shell/static configuration and SoftAP mode for gateway-led pairing
 - **Dual Device Setup**: Audio Gateway and Headset device roles
 - **Battery Power Support**: Optional battery operation for headset device
-- **mDNS Discovery**: Automatic device discovery within the same network (Need mDNS support in local network)
+- **DNS-SD Service Discovery**: Gateway advertises audio service via DNS-SD (mDNS responder) for automatic audio gateway discovery on local networks
 
 ## 🔧 Hardware Requirements
 
@@ -253,7 +253,10 @@ uart:~$ wifi cred auto_connect
 ```
 
 The device will remember this set of credential and autoconnect to target router after reset.
-Headset device will find Gateway device automatically through mDNS in the same network.
+
+**Gateway Discovery Methods:**
+- **DNS-SD (preferred)**: When both devices are connected to a router/network with mDNS support, the headset automatically discovers the gateway using DNS-SD service advertisements (`_nrfwifiaudio._udp.local`)
+- **UDP-based discovery (fallback)**: When connected to the gateway's SoftAP mode, or if DNS-SD is unavailable, the headset discovers the gateway's IP address from the first received UDP packet
 
 #### 2) Set Audio Gateway as Output on PC and Start Audio Streaming
 

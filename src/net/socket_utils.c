@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 #include <zephyr/logging/log.h>
+#include <zephyr/logging/log_ctrl.h>
 LOG_MODULE_REGISTER(socket_utils, CONFIG_SOCKET_UTILS_LOG_LEVEL);
 
 #include <errno.h>
@@ -16,6 +17,7 @@ LOG_MODULE_REGISTER(socket_utils, CONFIG_SOCKET_UTILS_LOG_LEVEL);
 #include <zephyr/net/net_ip.h>
 #include <zephyr/net/conn_mgr_connectivity.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/net/dns_sd.h>
 #include "socket_utils.h"
 #include "net_event_mgmt.h"
 #include "wifi_utils.h"
@@ -29,6 +31,26 @@ LOG_MODULE_REGISTER(socket_utils, CONFIG_SOCKET_UTILS_LOG_LEVEL);
 
 // #define pc_port  60000
 #define socket_port 60010 // UDP audio transport port
+
+#define DNS_SD_SERVICE_TYPE         "_nrfwifiaudio"
+#define DNS_SD_SERVICE_PROTO        "_udp"
+#define DNS_SD_SERVICE_DOMAIN       "local"
+#define DNS_SD_SERVICE_NAME         DNS_SD_SERVICE_TYPE "." DNS_SD_SERVICE_PROTO "." DNS_SD_SERVICE_DOMAIN
+#define DNS_SD_DISCOVERY_TIMEOUT_MS 3000
+
+#if defined(CONFIG_DNS_SD) && defined(CONFIG_NET_HOSTNAME)
+static const char audio_service_txt[] = "\x0A"
+					"codec=opus"
+					"\x0C"
+					"rate=320kbps"
+					"\x0A"
+					"channels=2"
+					"\x0B"
+					"latency=low";
+
+DNS_SD_REGISTER_UDP_SERVICE(audio_service, CONFIG_NET_HOSTNAME, DNS_SD_SERVICE_TYPE,
+			    DNS_SD_SERVICE_DOMAIN, audio_service_txt, socket_port);
+#endif
 
 /**********External Resources START**************/
 #if IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_AP)
@@ -46,6 +68,141 @@ static socket_receive_t socket_receive;
 K_MSGQ_DEFINE(socket_recv_queue, sizeof(socket_receive), 1, 4);
 
 static net_util_socket_rx_callback_t socket_rx_cb;
+
+#if defined(CONFIG_SOCKET_ROLE_CLIENT) && defined(CONFIG_DNS_SD) && defined(CONFIG_DNS_RESOLVER)
+struct dnssd_discovery_ctx {
+	struct in_addr addr;
+	char host[DNS_MAX_NAME_SIZE + 1];
+	char instance[DNS_MAX_NAME_SIZE + 1];
+	uint16_t port;
+	uint16_t srv_dns_id;
+	bool srv_received;
+	bool addr_received;
+	int status;
+	struct k_sem done;
+};
+
+static void dnssd_service_cb(enum dns_resolve_status status, struct dns_addrinfo *info,
+			     void *user_data)
+{
+	struct dnssd_discovery_ctx *ctx = user_data;
+
+	LOG_DBG("Callback: status=%d, ai_family=%d, ai_extension=%d, ai_addrlen=%d", status,
+		info->ai_family, info->ai_extension, info->ai_addrlen);
+
+	if (status == DNS_EAI_INPROGRESS) {
+		if (info->ai_extension == DNS_RESOLVE_SRV) {
+			size_t len = MIN(info->ai_srv.targetlen, sizeof(ctx->host) - 1);
+
+			memcpy(ctx->host, info->ai_srv.target, len);
+			ctx->host[len] = '\0';
+			ctx->port = info->ai_srv.port;
+			ctx->srv_received = true;
+			LOG_INF("SRV record: host=%s, port=%u", ctx->host, ctx->port);
+			k_sem_give(&ctx->done);
+		} else if (info->ai_extension == DNS_RESOLVE_TXT) {
+			LOG_INF("DNS-SD TXT: %s", info->ai_txt.text);
+		} else if (info->ai_family == AF_INET) {
+			/* A record from additional records section */
+			ctx->addr = net_sin(&info->ai_addr)->sin_addr;
+			ctx->addr_received = true;
+			LOG_INF("A record: %d.%d.%d.%d", ctx->addr.s4_addr[0], ctx->addr.s4_addr[1],
+				ctx->addr.s4_addr[2], ctx->addr.s4_addr[3]);
+			k_sem_give(&ctx->done);
+		} else if (info->ai_family == AF_LOCAL && info->ai_addrlen > 0) {
+			size_t len = MIN(info->ai_addrlen, sizeof(ctx->instance) - 1);
+
+			memcpy(ctx->instance, info->ai_canonname, len);
+			ctx->instance[len] = '\0';
+			LOG_INF("Discovered service instance %s", ctx->instance);
+			k_sem_give(&ctx->done);
+		} else {
+			LOG_WRN("Unexpected record: family=%d, extension=%d", info->ai_family,
+				info->ai_extension);
+		}
+		return;
+	}
+
+	ctx->status = status;
+	k_sem_give(&ctx->done);
+}
+
+static int dns_sd_discover_gateway(void)
+{
+	struct dnssd_discovery_ctx ctx = {
+		.port = socket_port,
+	};
+	int err;
+	int retries;
+	char hostname[DNS_MAX_NAME_SIZE + 1];
+
+	k_sem_init(&ctx.done, 0, 1);
+
+	/* Step 1: Query PTR to discover service instances */
+	ctx.status = 0;
+	err = dns_resolve_service(dns_resolve_get_default(), DNS_SD_SERVICE_NAME, &ctx.srv_dns_id,
+				  dnssd_service_cb, &ctx, DNS_SD_DISCOVERY_TIMEOUT_MS);
+	if (err < 0) {
+		return err;
+	}
+
+	/* Wait for PTR response with instance name */
+	err = k_sem_take(&ctx.done, K_MSEC(DNS_SD_DISCOVERY_TIMEOUT_MS));
+	if (err != 0 || ctx.instance[0] == '\0') {
+		if (ctx.srv_dns_id != 0U) {
+			(void)dns_cancel_addr_info(ctx.srv_dns_id);
+		}
+		return (err != 0) ? -ETIMEDOUT : (ctx.status ? ctx.status : -ENOENT);
+	}
+
+	LOG_INF("PTR query complete: instance=%s", ctx.instance);
+
+	/* Extract hostname from instance name (e.g., "audiogateway" from
+	 * "audiogateway._nrfwifiaudio._udp.local") */
+	const char *dot = strchr(ctx.instance, '.');
+	size_t hostname_len = dot ? (size_t)(dot - ctx.instance) : strlen(ctx.instance);
+	hostname_len = MIN(hostname_len, sizeof(hostname) - 7); /* Reserve space for ".local" */
+	memcpy(hostname, ctx.instance, hostname_len);
+	snprintf(hostname + hostname_len, sizeof(hostname) - hostname_len, ".local");
+
+	LOG_INF("Querying A record for: %s", hostname);
+
+	/* Step 2: Resolve A record for the hostname directly */
+	ctx.status = 0;
+	err = dns_get_addr_info(hostname, DNS_QUERY_TYPE_A, &ctx.srv_dns_id, dnssd_service_cb, &ctx,
+				DNS_SD_DISCOVERY_TIMEOUT_MS);
+	if (err < 0) {
+		return err;
+	}
+
+	retries = 5;
+	while (retries-- > 0 && !ctx.addr_received) {
+		err = k_sem_take(&ctx.done, K_MSEC(300));
+		if (err != 0) {
+			break;
+		}
+	}
+
+	if (!ctx.addr_received) {
+		if (ctx.srv_dns_id != 0U) {
+			(void)dns_cancel_addr_info(ctx.srv_dns_id);
+		}
+		LOG_ERR("A query for %s failed", hostname);
+		return ctx.status ? ctx.status : -ENOENT;
+	}
+
+	LOG_INF("Resolved gateway: %d.%d.%d.%d:%u", ctx.addr.s4_addr[0], ctx.addr.s4_addr[1],
+		ctx.addr.s4_addr[2], ctx.addr.s4_addr[3], ctx.port);
+
+	socket_utils_set_target_ipv4(&ctx.addr);
+
+	if (ctx.port != 0U) {
+		target_addr.sin_port = htons(ctx.port);
+	}
+
+	return 0;
+}
+#endif /* CONFIG_SOCKET_ROLE_CLIENT && CONFIG_DNS_SD */
 
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
 volatile bool serveraddr_set_signall = false;
@@ -170,57 +327,6 @@ int socket_utils_tx_data(uint8_t *data, size_t length)
 	return bytes_sent;
 }
 
-#ifdef CONFIG_MDNS_RESOLVER
-int do_mdns_query(void)
-{
-	struct addrinfo *result;
-	struct addrinfo *addr;
-	struct addrinfo hints = {
-		.ai_socktype = SOCK_DGRAM,
-		.ai_family = AF_INET,
-	};
-
-	char addr_str[NET_IPV6_ADDR_LEN];
-	int err;
-
-	for (int i = 1; i <= CONFIG_MDNS_QUERY_ATTEMPTS; i++) {
-		err = getaddrinfo(CONFIG_MDNS_QUERY_NAME, NULL, &hints, &result);
-		if (!err) {
-			LOG_INF("Got address from mDNS at attempt %d", i);
-			break;
-		}
-		LOG_DBG("Failed to get address from mDNS at attempt %d, error %d", i, err);
-	}
-	if (err) {
-		LOG_ERR("getaddrinfo() failed, error %d", err);
-		return err;
-	}
-
-	for (addr = result; addr; addr = addr->ai_next) {
-		if (addr->ai_family == AF_INET) {
-			struct sockaddr_in *addr4 = (struct sockaddr_in *)addr->ai_addr;
-
-			inet_ntop(AF_INET, &addr4->sin_addr, addr_str, sizeof(addr_str));
-			// LOG_INF("IPv4 address: %s", addr_str);
-
-			if (addr4->sin_addr.s_addr == 0) {
-				LOG_ERR("Invalid IP address");
-				continue;
-			}
-
-			socket_utils_set_target_ipv4(&addr4->sin_addr);
-
-		} else if (addr->ai_family == AF_INET6) {
-			struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)addr->ai_addr;
-
-			inet_ntop(AF_INET6, &addr6->sin6_addr, addr_str, sizeof(addr_str));
-			LOG_INF("IPv6 address: %s", addr_str);
-		}
-	}
-	return 0;
-}
-#endif /* CONFIG_MDNS_RESOLVER */
-
 #if defined(CONFIG_SOCKET_ROLE_SERVER)
 void socket_utils_softap_handle_disconnect(void)
 {
@@ -319,19 +425,20 @@ void socket_utils_thread(void)
 
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
 	if (!socket_utils_is_target_set()) {
-#ifdef CONFIG_MDNS_RESOLVER
-		ret = do_mdns_query();
+
+#if defined(CONFIG_DNS_SD) && defined(CONFIG_DNS_RESOLVER)
+		ret = dns_sd_discover_gateway();
 #else
 		ret = -ENOTSUP;
-#endif /* CONFIG_MDNS_RESOLVER */
+#endif /* CONFIG_DNS_SD && CONFIG_DNS_RESOLVER */
 
 		if (ret < 0) {
-			LOG_INF("mDNS lookup unavailable (err %d); waiting for DHCP-based target "
+			LOG_INF("DNS-SD lookup unavailable (err %d); waiting for DHCP-based target "
 				"configuration",
 				ret);
 		}
 	} else {
-		LOG_DBG("Target address already provisioned; skipping mDNS lookup");
+		LOG_DBG("Target address already provisioned; skipping DNS-SD lookup");
 	}
 
 	while (!serveraddr_set_signall) {

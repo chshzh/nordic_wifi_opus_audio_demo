@@ -380,7 +380,7 @@ void wifi_print_dhcp_ip(struct net_mgmt_event_callback *cb)
 	net_addr_ntop(AF_INET, addr, dhcp_info, sizeof(dhcp_info));
 	LOG_INF("\r\n\r\nDevice IP address: %s\r\n", dhcp_info);
 #if defined(CONFIG_SOCKET_ROLE_CLIENT)
-	LOG_INF("DHCP complete; gateway discovery will proceed via mDNS");
+	LOG_INF("DHCP complete; gateway discovery will proceed via DNS-SD and mDNS");
 #endif
 }
 #else
