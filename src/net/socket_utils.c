@@ -371,6 +371,8 @@ void socket_utils_thread(void)
 	LOG_INF("SSID: %s", CONFIG_SOFTAP_SSID);
 	LOG_INF("Password: %s", CONFIG_SOFTAP_PASSWORD);
 	LOG_INF("Socket server will start once a station connects");
+	LOG_INF("Headset can connect using: wifi cred add -s %s -k 1 -p %s", CONFIG_SOFTAP_SSID,
+		CONFIG_SOFTAP_PASSWORD);
 
 	ret = k_sem_take(&station_connected_sem, K_FOREVER);
 	if (ret) {
@@ -392,11 +394,6 @@ void socket_utils_thread(void)
 		"CONFIG_WIFI_CREDENTIALS_STATIC or CONFIG_WIFI_CREDENTIALS_SHELL");
 #endif /* IS_ENABLED(CONFIG_WIFI_CREDENTIALS_STATIC) */
 #if IS_ENABLED(CONFIG_SOCKET_ROLE_CLIENT)
-	int cred_ret = wifi_utils_ensure_gateway_softap_credentials();
-	if (cred_ret && cred_ret != -ENOTSUP) {
-		LOG_WRN("Provisioning default GatewayAP credentials failed: %d", cred_ret);
-	}
-
 	int auto_ret = wifi_utils_auto_connect_stored();
 	if (auto_ret && auto_ret != -EALREADY && auto_ret != -ENOTSUP) {
 		LOG_WRN("Auto-connect to stored credentials failed: %d", auto_ret);
