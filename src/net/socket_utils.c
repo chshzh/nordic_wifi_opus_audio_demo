@@ -424,7 +424,20 @@ void socket_utils_thread(void)
 	if (!socket_utils_is_target_set()) {
 
 #if defined(CONFIG_DNS_SD) && defined(CONFIG_DNS_RESOLVER)
-		ret = dns_sd_discover_gateway();
+		int dns_sd_retries = 3;
+		for (int attempt = 1; attempt <= dns_sd_retries; attempt++) {
+			LOG_INF("DNS-SD discovery attempt %d/%d", attempt, dns_sd_retries);
+			ret = dns_sd_discover_gateway();
+			if (ret == 0) {
+				LOG_INF("DNS-SD discovery succeeded on attempt %d", attempt);
+				break;
+			}
+			LOG_WRN("DNS-SD discovery attempt %d failed (err %d)", attempt, ret);
+			if (attempt < dns_sd_retries) {
+				LOG_INF("Retrying in 2 seconds...");
+				k_sleep(K_SECONDS(2));
+			}
+		}
 #else
 		ret = -ENOTSUP;
 #endif /* CONFIG_DNS_SD && CONFIG_DNS_RESOLVER */
@@ -433,6 +446,10 @@ void socket_utils_thread(void)
 			LOG_INF("DNS-SD lookup unavailable (err %d); waiting for DHCP-based target "
 				"configuration",
 				ret);
+			LOG_INF("Hint: Use \"socket set_target_addr 192.168.1.1:60010\" to connect "
+				"with gateway manually. Replace 192.168.1.1 with the actual "
+				"gateway "
+				"IP shown in the gateway device log output.");
 		}
 	} else {
 		LOG_DBG("Target address already provisioned; skipping DNS-SD lookup");
