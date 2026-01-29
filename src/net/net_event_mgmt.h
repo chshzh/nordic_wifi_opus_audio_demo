@@ -21,6 +21,13 @@
  */
 int init_network_events(void);
 
+/**
+ * @brief Check if network is connected with an IP address assigned
+ *
+ * @return true if WiFi is connected and DHCP has assigned an IP address
+ */
+bool net_event_mgmt_is_connected(void);
+
 /* External semaphores for network events */
 extern struct k_sem iface_up_sem;
 extern struct k_sem wpa_supplicant_ready_sem;

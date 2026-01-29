@@ -549,6 +549,16 @@ static int cmd_set_target_address(const struct shell *shell, size_t argc, const 
 		return -1;
 	}
 
+	// Check if WiFi is connected and IP address is assigned
+	if (!net_event_mgmt_is_connected()) {
+		shell_error(shell, "Error: WiFi is not connected or IP address not assigned.");
+		shell_print(shell, "Please connect to WiFi first using:");
+		shell_print(shell, "  wifi cred add -s <SSID> -p <password> -k 1");
+		shell_print(shell, "  wifi cred auto_connect");
+		shell_print(shell, "Wait for 'Network DHCP bound!' message before setting target address.");
+		return -ENOTCONN;
+	}
+
 	char *target_addr_str = (char *)k_malloc(22); // Allocate memory for the string
 
 	if (target_addr_str == NULL) {

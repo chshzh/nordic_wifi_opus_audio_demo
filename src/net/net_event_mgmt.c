@@ -37,6 +37,9 @@ LOG_MODULE_REGISTER(net_event_mgmt, CONFIG_LOG_DEFAULT_LEVEL);
 K_SEM_DEFINE(iface_up_sem, 0, 1);
 K_SEM_DEFINE(wpa_supplicant_ready_sem, 0, 1);
 K_SEM_DEFINE(ipv4_dhcp_bond_sem, 0, 1);
+
+/* Track network connectivity state (WiFi connected + IP assigned) */
+static bool network_connected;
 /* Function declarations */
 
 /* Declare the callback structures for Wi-Fi and network events */
@@ -304,6 +307,7 @@ static void l2_wifi_conn_event_handler(struct net_mgmt_event_callback *cb, uint6
 	case NET_EVENT_WIFI_DISCONNECT_RESULT: {
 		const struct wifi_status *status = (const struct wifi_status *)cb->info;
 		LOG_INF("WiFi disconnected: status=%d", status ? status->status : -1);
+		network_connected = false;
 #if IS_ENABLED(CONFIG_SOCKET_ROLE_CLIENT)
 		socket_utils_clear_target();
 #endif
@@ -346,6 +350,7 @@ static void l3_ipv4_event_handler(struct net_mgmt_event_callback *cb, uint64_t m
 	switch (mgmt_event) {
 	case NET_EVENT_IPV4_DHCP_BOUND:
 		LOG_INF("Network DHCP bound!");
+		network_connected = true;
 		led_on(LED_NET_RGB, LED_COLOR_GREEN, LED_SOLID);
 		/* Print IP address information */
 		wifi_print_dhcp_ip(cb);
@@ -356,6 +361,11 @@ static void l3_ipv4_event_handler(struct net_mgmt_event_callback *cb, uint64_t m
 		LOG_DBG("Unhandled network event: 0x%08" PRIx64, mgmt_event);
 		break;
 	}
+}
+
+bool net_event_mgmt_is_connected(void)
+{
+	return network_connected;
 }
 
 int init_network_events(void)
