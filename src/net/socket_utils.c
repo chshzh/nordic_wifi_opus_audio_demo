@@ -117,6 +117,7 @@ static void dnssd_service_cb(enum dns_resolve_status status, struct dns_addrinfo
 			LOG_INF("Discovered service instance %s", ctx->instance);
 			k_sem_give(&ctx->done);
 		} else {
+
 			LOG_WRN("Unexpected record: family=%d, extension=%d", info->ai_family,
 				info->ai_extension);
 		}
@@ -555,7 +556,9 @@ static int cmd_set_target_address(const struct shell *shell, size_t argc, const 
 		shell_print(shell, "Please connect to WiFi first using:");
 		shell_print(shell, "  wifi cred add -s <SSID> -p <password> -k 1");
 		shell_print(shell, "  wifi cred auto_connect");
-		shell_print(shell, "Wait for 'Network DHCP bound!' message before setting target address.");
+		shell_print(
+			shell,
+			"Wait for 'Network DHCP bound!' message before setting target address.");
 		return -ENOTCONN;
 	}
 
